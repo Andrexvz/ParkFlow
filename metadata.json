@@ -1,0 +1,6 @@
+{
+  "name": "AutoPark Neiva - Sistema Inteligente de Parqueadero",
+  "description": "Sistema integral de control de parqueaderos para Neiva: gestión de entradas y salidas, validación de placas colombianas, tarifas automatizadas, mapa de celdas en tiempo real y reportes administrativos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
