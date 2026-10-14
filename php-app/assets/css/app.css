@@ -1,0 +1,68 @@
+/* ParkFlow - Estilos Prémium para Interfaz Web en PHP (100% Offline) */
+:root {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.font-mono {
+  font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+}
+
+/* Animaciones suaves */
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Efectos visuales de celdas */
+.space-card {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.space-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.08);
+}
+
+/* Ticket Térmico Imprimible */
+.ticket-paper {
+  background: #ffffff;
+  color: #111827;
+  font-family: 'JetBrains Mono', monospace;
+  position: relative;
+  box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.15);
+}
+
+.ticket-paper::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: radial-gradient(circle, transparent, transparent 50%, #ffffff 50%, #ffffff 100%);
+  background-size: 12px 12px;
+}
+
+/* Estilos de Impresión */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printableTicket, #printableTicket * {
+    visibility: visible;
+  }
+  #printableTicket {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 10px;
+    box-shadow: none;
+    border: none;
+  }
+}

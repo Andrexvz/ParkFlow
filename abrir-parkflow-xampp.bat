@@ -1,0 +1,3 @@
+@echo off
+echo Abriendo ParkFlow en XAMPP...
+start http://localhost/parkflow

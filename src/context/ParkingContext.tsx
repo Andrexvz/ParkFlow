@@ -18,6 +18,7 @@ import {
 } from '../data/initialData';
 import { calculateParkingFee, formatCOP } from '../utils/pricingCalculator';
 import { soundEffects } from '../utils/soundEffects';
+import { api, HealthResponse } from '../services/api';
 
 interface EntryPayload {
   plate: string;
@@ -38,6 +39,8 @@ interface ExitPayload {
   exitNotes?: string;
 }
 
+export type ConnectionStatus = 'connected' | 'offline' | 'checking';
+
 interface ParkingContextType {
   currentUser: User | null;
   users: User[];
@@ -50,25 +53,32 @@ interface ParkingContextType {
   lastGeneratedTicket: Movement | null;
   ticketModalType: 'entry' | 'exit' | null;
 
+  // XAMPP / MySQL Backend status
+  connectionStatus: ConnectionStatus;
+  healthData: HealthResponse | null;
+  isBackendSyncing: boolean;
+  checkBackendConnection: () => Promise<boolean>;
+  reseedDatabase: () => Promise<boolean>;
+
   // Actions
   login: (user: User) => void;
   logout: () => void;
   switchUser: (userId: string) => void;
-  registerEntry: (payload: EntryPayload) => { success: boolean; movement?: Movement; error?: string };
-  processExit: (payload: ExitPayload) => { success: boolean; movement?: Movement; error?: string };
-  cancelActiveMovement: (movementId: string, reason: string) => { success: boolean; error?: string };
+  registerEntry: (payload: EntryPayload) => Promise<{ success: boolean; movement?: Movement; error?: string }>;
+  processExit: (payload: ExitPayload) => Promise<{ success: boolean; movement?: Movement; error?: string }>;
+  cancelActiveMovement: (movementId: string, reason: string) => Promise<{ success: boolean; error?: string }>;
   
   // Spaces & Rates
-  updateSpaceStatus: (spaceId: string, status: SpaceStatus, notes?: string) => void;
-  createSpace: (space: Omit<ParkingSpace, 'id'>) => { success: boolean; error?: string };
-  updateSpace: (space: ParkingSpace) => void;
-  deleteSpace: (spaceId: string) => { success: boolean; error?: string };
-  updateRate: (rate: VehicleRate) => void;
+  updateSpaceStatus: (spaceId: string, status: SpaceStatus, notes?: string) => Promise<void>;
+  createSpace: (space: Omit<ParkingSpace, 'id'>) => Promise<{ success: boolean; error?: string }>;
+  updateSpace: (space: ParkingSpace) => Promise<void>;
+  deleteSpace: (spaceId: string) => Promise<{ success: boolean; error?: string }>;
+  updateRate: (rate: VehicleRate) => Promise<void>;
 
   // Users
-  createUser: (user: Omit<User, 'id'>) => { success: boolean; error?: string };
-  updateUser: (user: User) => void;
-  toggleUserActive: (userId: string) => void;
+  createUser: (user: Omit<User, 'id'>) => Promise<{ success: boolean; error?: string }>;
+  updateUser: (user: User) => Promise<void>;
+  toggleUserActive: (userId: string) => Promise<void>;
 
   // Modals & Tickets
   openTicketModal: (movement: Movement, type: 'entry' | 'exit') => void;
@@ -94,6 +104,11 @@ const STORAGE_KEYS = {
 };
 
 export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Backend connection state
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('checking');
+  const [healthData, setHealthData] = useState<HealthResponse | null>(null);
+  const [isBackendSyncing, setIsBackendSyncing] = useState<boolean>(false);
+
   // Users state
   const [users, setUsers] = useState<User[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.USERS);
@@ -147,7 +162,7 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return new Date(clockTick + simulatedTimeOffsetMinutes * 60 * 1000);
   }, [clockTick, simulatedTimeOffsetMinutes]);
 
-  // Sync to localStorage
+  // Sync to localStorage as persistent local cache
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
   }, [users]);
@@ -175,6 +190,76 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.TIME_OFFSET, String(simulatedTimeOffsetMinutes));
   }, [simulatedTimeOffsetMinutes]);
+
+  // Función para sincronizar datos desde MySQL / PHP
+  const syncWithBackend = useCallback(async () => {
+    setIsBackendSyncing(true);
+    try {
+      const [dbUsers, dbSpaces, dbRates, dbMovements] = await Promise.all([
+        api.getUsers(),
+        api.getSpaces(),
+        api.getRates(),
+        api.getMovements()
+      ]);
+
+      if (dbUsers && dbUsers.length > 0) setUsers(dbUsers);
+      if (dbSpaces && dbSpaces.length > 0) setSpaces(dbSpaces);
+      if (dbRates && dbRates.length > 0) setRates(dbRates);
+      if (dbMovements) setMovements(dbMovements);
+
+      // Si el usuario actual ya no está en la BD, asignar el primero activo
+      if (currentUser && dbUsers && !dbUsers.some(u => u.id === currentUser.id)) {
+        setCurrentUser(dbUsers[0] || null);
+      }
+    } catch (err) {
+      console.warn('Error al sincronizar datos con XAMPP MySQL:', err);
+    } finally {
+      setIsBackendSyncing(false);
+    }
+  }, [currentUser]);
+
+  // Verificar conexión con el backend de XAMPP
+  const checkBackendConnection = useCallback(async (): Promise<boolean> => {
+    setConnectionStatus('checking');
+    try {
+      const health = await api.checkHealth();
+      if (health.success && health.database?.connected) {
+        setHealthData(health);
+        setConnectionStatus('connected');
+        await syncWithBackend();
+        return true;
+      } else {
+        setConnectionStatus('offline');
+        return false;
+      }
+    } catch (e) {
+      console.info('XAMPP MySQL no responde o está apagado. Operando en modo local.', e);
+      setConnectionStatus('offline');
+      return false;
+    }
+  }, [syncWithBackend]);
+
+  // Chequeo de conexión al iniciar
+  useEffect(() => {
+    checkBackendConnection();
+  }, [checkBackendConnection]);
+
+  // Inicializar o re-sembrar la base de datos MySQL con 1 clic
+  const reseedDatabase = useCallback(async (): Promise<boolean> => {
+    try {
+      setIsBackendSyncing(true);
+      await api.setupDatabase();
+      await checkBackendConnection();
+      soundEffects.playSuccess();
+      return true;
+    } catch (e) {
+      console.error('Error al inicializar base de datos MySQL:', e);
+      soundEffects.playAlert();
+      return false;
+    } finally {
+      setIsBackendSyncing(false);
+    }
+  }, [checkBackendConnection]);
 
   // Computación de Estadísticas del Parqueadero en Tiempo Real
   const stats: ParkingStats = useMemo(() => {
@@ -223,8 +308,8 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [users]);
 
-  // Registro de Entrada
-  const registerEntry = useCallback((payload: EntryPayload) => {
+  // Registro de Entrada (Integrado con MySQL y fallback local)
+  const registerEntry = useCallback(async (payload: EntryPayload) => {
     const { plate, vehicleType, helmetsCount, entryNotes, clientName, clientPhone } = payload;
     const cleanPlate = plate.trim().toUpperCase();
 
@@ -261,7 +346,55 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     }
 
-    // 3. Crear movimiento
+    // Si estamos conectados con XAMPP MySQL, registrar a través de la API PHP
+    if (connectionStatus === 'connected') {
+      try {
+        const createdMovement = await api.registerEntry({
+          plate: cleanPlate,
+          vehicleType,
+          spaceId: targetSpace.id,
+          operatorEntryId: currentUser?.id || 'usr-op-1',
+          operatorEntryName: currentUser?.name || 'Operador en Turno',
+          helmetsCount: vehicleType === 'motocicleta' ? (helmetsCount || 0) : undefined,
+          entryNotes,
+          clientName,
+          clientPhone,
+          entryTime: currentEffectiveTime.toISOString()
+        });
+
+        // Actualizar estado local
+        setMovements(prev => [createdMovement, ...prev.filter(m => m.id !== createdMovement.id)]);
+        setSpaces(prev => prev.map(s => {
+          if (s.id === targetSpace!.id) {
+            return {
+              ...s,
+              status: 'ocupado',
+              currentVehiclePlate: cleanPlate,
+              currentMovementId: createdMovement.id
+            };
+          }
+          return s;
+        }));
+
+        soundEffects.playSuccess();
+        setLastGeneratedTicket(createdMovement);
+        setTicketModalType('entry');
+
+        return {
+          success: true,
+          movement: createdMovement
+        };
+      } catch (err: any) {
+        console.error('Error al registrar en MySQL:', err);
+        // Si falló la API, mostrar el error devuelto por PHP/MySQL
+        return {
+          success: false,
+          error: err.message || 'Error al guardar en la base de datos MySQL.'
+        };
+      }
+    }
+
+    // Modo local / Fallback
     const movementId = `mov-${Date.now()}`;
     const ticketSeq = 10030 + movements.length;
     const ticketNumber = `TK-${ticketSeq}`;
@@ -284,7 +417,6 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: 'activo'
     };
 
-    // 4. Actualizar estado de la celda
     setSpaces(prev => prev.map(s => {
       if (s.id === targetSpace!.id) {
         return {
@@ -297,10 +429,8 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return s;
     }));
 
-    // 5. Guardar movimiento
     setMovements(prev => [newMovement, ...prev]);
 
-    // 6. Efecto auditivo y mostrar modal de ticket
     soundEffects.playSuccess();
     setLastGeneratedTicket(newMovement);
     setTicketModalType('entry');
@@ -309,10 +439,10 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       success: true,
       movement: newMovement
     };
-  }, [movements, spaces, currentEffectiveTime, currentUser]);
+  }, [movements, spaces, currentEffectiveTime, currentUser, connectionStatus]);
 
-  // Registro de Salida y Cobro
-  const processExit = useCallback((payload: ExitPayload) => {
+  // Registro de Salida y Cobro (Integrado con MySQL y fallback local)
+  const processExit = useCallback(async (payload: ExitPayload) => {
     const { movementId, paymentMethod, amountReceived, isLostTicket, discountPercent, exitNotes } = payload;
     const movement = movements.find(m => m.id === movementId);
 
@@ -348,7 +478,59 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       changeGiven = amountReceived - breakdown.total;
     }
 
-    // Finalizar movimiento
+    // Si estamos conectados con MySQL en XAMPP
+    if (connectionStatus === 'connected') {
+      try {
+        const updatedMovement = await api.processExit({
+          movementId,
+          paymentMethod,
+          operatorExitId: currentUser?.id || 'usr-op-1',
+          operatorExitName: currentUser?.name || 'Operador en Turno',
+          exitTime: exitDate.toISOString(),
+          totalMinutes: breakdown.totalMinutes,
+          billedMinutes: breakdown.graceApplied ? 0 : breakdown.totalMinutes,
+          graceApplied: breakdown.graceApplied,
+          subtotal: breakdown.baseCharge,
+          discount: breakdown.discount,
+          lostTicketCharge: isLostTicket,
+          totalPaid: breakdown.total,
+          amountReceived: paymentMethod === 'efectivo' ? amountReceived : breakdown.total,
+          changeGiven,
+          exitNotes
+        });
+
+        // Actualizar estado local
+        setMovements(prev => prev.map(m => m.id === movementId ? updatedMovement : m));
+        setSpaces(prev => prev.map(s => {
+          if (s.id === movement.spaceId) {
+            return {
+              ...s,
+              status: 'libre',
+              currentVehiclePlate: undefined,
+              currentMovementId: undefined
+            };
+          }
+          return s;
+        }));
+
+        soundEffects.playPayment();
+        setLastGeneratedTicket(updatedMovement);
+        setTicketModalType('exit');
+
+        return {
+          success: true,
+          movement: updatedMovement
+        };
+      } catch (err: any) {
+        console.error('Error al procesar salida en MySQL:', err);
+        return {
+          success: false,
+          error: err.message || 'Error al procesar salida en la base de datos.'
+        };
+      }
+    }
+
+    // Modo local / Fallback
     const updatedMovement: Movement = {
       ...movement,
       exitTime: exitDate.toISOString(),
@@ -368,10 +550,7 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: 'completado'
     };
 
-    // Actualizar movimiento en lista
     setMovements(prev => prev.map(m => m.id === movementId ? updatedMovement : m));
-
-    // Liberar celda
     setSpaces(prev => prev.map(s => {
       if (s.id === movement.spaceId) {
         return {
@@ -392,13 +571,22 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       success: true,
       movement: updatedMovement
     };
-  }, [movements, rates, currentEffectiveTime, currentUser]);
+  }, [movements, rates, currentEffectiveTime, currentUser, connectionStatus]);
 
-  // Cancelar un movimiento activo (por ejemplo, error de tipografía inmediato del operador)
-  const cancelActiveMovement = useCallback((movementId: string, reason: string) => {
+  // Cancelar un movimiento activo
+  const cancelActiveMovement = useCallback(async (movementId: string, reason: string) => {
     const movement = movements.find(m => m.id === movementId && m.status === 'activo');
     if (!movement) {
       return { success: false, error: 'Movimiento no encontrado o no está activo.' };
+    }
+
+    if (connectionStatus === 'connected') {
+      try {
+        await api.cancelMovement(movementId, reason);
+      } catch (err: any) {
+        console.error('Error al cancelar en MySQL:', err);
+        return { success: false, error: err.message };
+      }
     }
 
     setMovements(prev => prev.map(m => {
@@ -426,10 +614,18 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }));
 
     return { success: true };
-  }, [movements, currentEffectiveTime]);
+  }, [movements, currentEffectiveTime, connectionStatus]);
 
   // Spaces management
-  const updateSpaceStatus = useCallback((spaceId: string, status: SpaceStatus, notes?: string) => {
+  const updateSpaceStatus = useCallback(async (spaceId: string, status: SpaceStatus, notes?: string) => {
+    if (connectionStatus === 'connected') {
+      try {
+        await api.updateSpaceStatus(spaceId, status, notes);
+      } catch (err) {
+        console.warn('Error al actualizar estado de celda en MySQL:', err);
+      }
+    }
+
     setSpaces(prev => prev.map(s => {
       if (s.id === spaceId) {
         return {
@@ -443,13 +639,24 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return s;
     }));
     soundEffects.playSuccess();
-  }, []);
+  }, [connectionStatus]);
 
-  const createSpace = useCallback((spaceData: Omit<ParkingSpace, 'id'>) => {
-    // Validar código único
+  const createSpace = useCallback(async (spaceData: Omit<ParkingSpace, 'id'>) => {
     if (spaces.some(s => s.code.toUpperCase() === spaceData.code.toUpperCase())) {
       return { success: false, error: `Ya existe una celda con el código ${spaceData.code}.` };
     }
+
+    if (connectionStatus === 'connected') {
+      try {
+        const created = await api.createSpace(spaceData);
+        setSpaces(prev => [...prev, created]);
+        soundEffects.playSuccess();
+        return { success: true };
+      } catch (err: any) {
+        return { success: false, error: err.message };
+      }
+    }
+
     const newSpace: ParkingSpace = {
       ...spaceData,
       id: `sp-${Date.now()}`
@@ -457,34 +664,69 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSpaces(prev => [...prev, newSpace]);
     soundEffects.playSuccess();
     return { success: true };
-  }, [spaces]);
+  }, [spaces, connectionStatus]);
 
-  const updateSpace = useCallback((spaceData: ParkingSpace) => {
+  const updateSpace = useCallback(async (spaceData: ParkingSpace) => {
+    if (connectionStatus === 'connected') {
+      try {
+        await api.updateSpace(spaceData);
+      } catch (err) {
+        console.warn('Error al actualizar celda en MySQL:', err);
+      }
+    }
     setSpaces(prev => prev.map(s => s.id === spaceData.id ? spaceData : s));
     soundEffects.playSuccess();
-  }, []);
+  }, [connectionStatus]);
 
-  const deleteSpace = useCallback((spaceId: string) => {
+  const deleteSpace = useCallback(async (spaceId: string) => {
     const space = spaces.find(s => s.id === spaceId);
     if (space?.status === 'ocupado') {
       return { success: false, error: 'No se puede eliminar una celda ocupada. Debe liberar el vehículo primero.' };
     }
+
+    if (connectionStatus === 'connected') {
+      try {
+        await api.deleteSpace(spaceId);
+      } catch (err: any) {
+        return { success: false, error: err.message };
+      }
+    }
+
     setSpaces(prev => prev.filter(s => s.id !== spaceId));
     soundEffects.playSuccess();
     return { success: true };
-  }, [spaces]);
+  }, [spaces, connectionStatus]);
 
   // Rates management
-  const updateRate = useCallback((rate: VehicleRate) => {
+  const updateRate = useCallback(async (rate: VehicleRate) => {
+    if (connectionStatus === 'connected') {
+      try {
+        await api.updateRate(rate);
+      } catch (err) {
+        console.warn('Error al actualizar tarifa en MySQL:', err);
+      }
+    }
     setRates(prev => prev.map(r => r.id === rate.id ? rate : r));
     soundEffects.playSuccess();
-  }, []);
+  }, [connectionStatus]);
 
   // Users management
-  const createUser = useCallback((userData: Omit<User, 'id'>) => {
+  const createUser = useCallback(async (userData: Omit<User, 'id'>) => {
     if (users.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
       return { success: false, error: 'Ya existe un usuario con este correo electrónico.' };
     }
+
+    if (connectionStatus === 'connected') {
+      try {
+        const created = await api.createUser(userData);
+        setUsers(prev => [...prev, created]);
+        soundEffects.playSuccess();
+        return { success: true };
+      } catch (err: any) {
+        return { success: false, error: err.message };
+      }
+    }
+
     const newUser: User = {
       ...userData,
       id: `usr-${Date.now()}`
@@ -492,17 +734,31 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setUsers(prev => [...prev, newUser]);
     soundEffects.playSuccess();
     return { success: true };
-  }, [users]);
+  }, [users, connectionStatus]);
 
-  const updateUser = useCallback((userData: User) => {
+  const updateUser = useCallback(async (userData: User) => {
+    if (connectionStatus === 'connected') {
+      try {
+        await api.updateUser(userData);
+      } catch (err) {
+        console.warn('Error al actualizar usuario en MySQL:', err);
+      }
+    }
     setUsers(prev => prev.map(u => u.id === userData.id ? userData : u));
     if (currentUser?.id === userData.id) {
       setCurrentUser(userData);
     }
     soundEffects.playSuccess();
-  }, [currentUser]);
+  }, [currentUser, connectionStatus]);
 
-  const toggleUserActive = useCallback((userId: string) => {
+  const toggleUserActive = useCallback(async (userId: string) => {
+    if (connectionStatus === 'connected') {
+      try {
+        await api.toggleUserActive(userId);
+      } catch (err) {
+        console.warn('Error al alternar estado en MySQL:', err);
+      }
+    }
     setUsers(prev => prev.map(u => {
       if (u.id === userId) {
         return { ...u, active: !u.active };
@@ -510,7 +766,7 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return u;
     }));
     soundEffects.playSuccess();
-  }, []);
+  }, [connectionStatus]);
 
   // Modal actions
   const openTicketModal = useCallback((movement: Movement, type: 'entry' | 'exit') => {
@@ -559,6 +815,11 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         simulatedTimeOffsetMinutes,
         lastGeneratedTicket,
         ticketModalType,
+        connectionStatus,
+        healthData,
+        isBackendSyncing,
+        checkBackendConnection,
+        reseedDatabase,
         login,
         logout,
         switchUser,
