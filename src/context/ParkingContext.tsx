@@ -109,10 +109,20 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [healthData, setHealthData] = useState<HealthResponse | null>(null);
   const [isBackendSyncing, setIsBackendSyncing] = useState<boolean>(false);
 
-  // Users state
+  // Users state: fusionar con INITIAL_USERS para asegurar credenciales y datos actualizados
   const [users, setUsers] = useState<User[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.USERS);
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
+    if (!saved) return INITIAL_USERS;
+    try {
+      const parsed: User[] = JSON.parse(saved);
+      // Actualizar contraseñas de usuarios iniciales si en localStorage tenían contraseñas viejas
+      return INITIAL_USERS.map(initU => {
+        const found = parsed.find(p => p.id === initU.id);
+        return found ? { ...found, password: initU.password } : initU;
+      }).concat(parsed.filter(p => !INITIAL_USERS.some(initU => initU.id === p.id)));
+    } catch {
+      return INITIAL_USERS;
+    }
   });
 
   // Current logged user

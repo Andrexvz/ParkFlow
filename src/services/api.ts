@@ -69,6 +69,15 @@ export const api = {
     return request<ApiResponse<any>>('/setup.php', { method: 'POST' });
   },
 
+  // Autenticación con Backend PHP / MySQL
+  async login(email: string, password: string): Promise<{ token: string; user: User }> {
+    const res = await request<ApiResponse<{ token: string; user: User }>>('/auth.php?action=login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    return res.data || (res as any);
+  },
+
   // Usuarios
   async getUsers(): Promise<User[]> {
     const res = await request<ApiResponse<User[]>>('/users.php', { method: 'GET' });

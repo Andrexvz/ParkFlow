@@ -66,12 +66,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     onSuccess(user.role);
   };
 
-  const handleFillDemoCredentials = (role: UserRole) => {
+  const handleFillDemoCredentials = (role: UserRole, specificOp?: string) => {
     setError(null);
     setSelectedRole(role);
     if (role === 'ADMIN') {
       setEmail('admin@parkflow.co');
       setPassword('admin123');
+    } else if (specificOp === 'operador2') {
+      setEmail('operador2@parkflow.co');
+      setPassword('valentina2026');
     } else {
       setEmail('operador1@parkflow.co');
       setPassword('charry2026');
@@ -331,11 +334,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
               Cargar Credenciales de Prueba:
             </p>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => handleFillDemoCredentials('ADMIN')}
-                className="flex items-center gap-2 p-2 rounded-lg text-left transition-all"
+                className="flex flex-col items-center justify-center p-2 rounded-lg text-center transition-all"
                 style={{
                   background: 'var(--bg-card)',
                   border: '1px solid var(--border-subtle)',
@@ -344,17 +347,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--blue-500)')}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
               >
-                <Shield size={14} color="var(--blue-400)" />
-                <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-primary)' }}>Admin</p>
-                  <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>clave: admin123</p>
-                </div>
+                <Shield size={14} color="var(--blue-400)" className="mb-1" />
+                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-primary)' }}>Admin</p>
+                <p style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>admin123</p>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleFillDemoCredentials('OPERADOR')}
-                className="flex items-center gap-2 p-2 rounded-lg text-left transition-all"
+                onClick={() => handleFillDemoCredentials('OPERADOR', 'operador1')}
+                className="flex flex-col items-center justify-center p-2 rounded-lg text-center transition-all"
                 style={{
                   background: 'var(--bg-card)',
                   border: '1px solid var(--border-subtle)',
@@ -363,11 +364,26 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--emerald-500)')}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
               >
-                <User size={14} color="var(--emerald-400)" />
-                <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-primary)' }}>Operador 1</p>
-                  <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>clave: charry2026</p>
-                </div>
+                <User size={14} color="var(--emerald-400)" className="mb-1" />
+                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-primary)' }}>Operador 1</p>
+                <p style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>charry2026</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleFillDemoCredentials('OPERADOR', 'operador2')}
+                className="flex flex-col items-center justify-center p-2 rounded-lg text-center transition-all"
+                style={{
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-subtle)',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--emerald-500)')}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
+              >
+                <User size={14} color="var(--emerald-400)" className="mb-1" />
+                <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-primary)' }}>Operador 2</p>
+                <p style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>valentina2026</p>
               </button>
             </div>
           </div>
