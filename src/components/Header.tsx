@@ -11,7 +11,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onOpenEntryModal }) => {
-  const { currentUser, logout, users, switchUser, stats, connectionStatus } = useParking();
+  const { currentUser, logout, stats, connectionStatus } = useParking();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showXamppModal, setShowXamppModal] = useState(false);
@@ -220,79 +220,27 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onOpenE
                     </span>
                   </div>
 
-                  {/* User switcher con restricciones estrictas de rol */}
-                  <div style={{ padding: '8px' }}>
-                    <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 8px 6px' }}>
-                      {currentUser?.role === 'ADMIN' ? 'Cambiar de Usuario (Admin)' : 'Operadores del Turno'}
-                    </p>
-
-                    {currentUser?.role === 'OPERADOR' && (
-                      <div
-                        style={{
-                          padding: '8px 10px',
-                          fontSize: '0.72rem',
-                          color: 'var(--text-muted)',
-                          background: 'rgba(244, 63, 94, 0.08)',
-                          borderRadius: 8,
-                          border: '1px solid rgba(244, 63, 94, 0.15)',
-                          marginBottom: 8,
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        🔒 <strong>Rol protegido:</strong> Para acceder con cuenta de Administrador debes cerrar sesión e ingresar tus credenciales.
-                      </div>
-                    )}
-
-                    {users
-                      .filter(u => currentUser?.role === 'ADMIN' || u.role === 'OPERADOR')
-                      .map(u => (
-                        <button
-                          key={u.id}
-                          onClick={() => { switchUser(u.id); setShowUserMenu(false); }}
-                          className="w-full flex items-center justify-between rounded-lg transition-all"
-                          style={{
-                            padding: '8px 10px',
-                            fontSize: '0.82rem',
-                            background: u.id === currentUser?.id ? 'rgba(59,130,246,0.12)' : 'transparent',
-                            color: u.id === currentUser?.id ? 'var(--blue-400)' : 'var(--text-secondary)',
-                            border: 'none',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                          }}
-                          onMouseEnter={e => { if (u.id !== currentUser?.id) (e.currentTarget.style.background = 'var(--bg-hover)'); }}
-                          onMouseLeave={e => { if (u.id !== currentUser?.id) (e.currentTarget.style.background = 'transparent'); }}
-                        >
-                          <span style={{ fontWeight: u.id === currentUser?.id ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {u.name}
-                          </span>
-                          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'capitalize', flexShrink: 0, marginLeft: 8 }}>
-                            {u.role.toLowerCase()}
-                          </span>
-                        </button>
-                      ))}
-                  </div>
-
                   {/* Actions */}
-                  <div style={{ padding: '8px', borderTop: '1px solid var(--border-subtle)' }}>
+                  <div style={{ padding: '8px' }}>
                     <button
                       onClick={() => { setShowUserMenu(false); setShowXamppModal(true); }}
                       className="w-full flex items-center gap-2 rounded-lg transition-all"
-                      style={{ padding: '8px 10px', fontSize: '0.82rem', color: 'var(--text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                      style={{ padding: '9px 12px', fontSize: '0.82rem', color: 'var(--text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <Database size={14} color="var(--blue-400)" />
+                      <Database size={15} color="var(--blue-400)" />
                       <span>Configuración XAMPP MySQL</span>
                     </button>
                     <button
                       onClick={() => { setShowUserMenu(false); logout(); }}
                       className="w-full flex items-center gap-2 rounded-lg transition-all"
-                      style={{ padding: '8px 10px', fontSize: '0.82rem', color: 'var(--rose-400)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                      style={{ padding: '9px 12px', fontSize: '0.82rem', color: 'var(--rose-400)', background: 'transparent', border: 'none', cursor: 'pointer', marginTop: 4, textAlign: 'left' }}
                       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(244,63,94,0.1)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <LogOut size={14} />
-                      <span>Cerrar Sesión</span>
+                      <LogOut size={15} />
+                      <span style={{ fontWeight: 600 }}>Cerrar Sesión</span>
                     </button>
                   </div>
                 </div>

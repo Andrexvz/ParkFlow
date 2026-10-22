@@ -2,17 +2,7 @@
 require_once __DIR__ . '/../config/db.php';
 $db = getDB();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['user_id'])) {
-    $userId = $_POST['user_id'];
-    $stmt = $db->prepare("SELECT * FROM `users` WHERE `id` = ? AND `active` = 1");
-    $stmt->execute([$userId]);
-    $user = $stmt->fetch();
-
-    if ($user) {
-        $_SESSION['current_user_id'] = $user['id'];
-        flashRedirect('../index.php?view=' . ($user['role'] === 'ADMIN' ? 'dashboard' : 'map'), "Sesión cambiada a: {$user['name']} ({$user['role']})", 'success');
-    }
-}
-
-header('Location: ../index.php');
+// Deshabilitado por política de autenticación individual estricta.
+// Cada usuario debe iniciar sesión con su propio correo y contraseña.
+flashRedirect('../index.php', 'Acceso denegado: Debe cerrar sesión e iniciar con sus credenciales individuales.', 'error');
 exit(0);

@@ -32,7 +32,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
 
     const user = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
     if (!user) {
-      setError('Credenciales inválidas. Correo no encontrado en el sistema.');
+      setError('Credenciales inválidas. Correo no registrado en el sistema.');
       return;
     }
 
@@ -45,19 +45,19 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     if (user.role !== selectedRole) {
       setError(
         selectedRole === 'ADMIN'
-          ? 'Acceso denegado: Esta cuenta no posee privilegios de Administrador.'
+          ? 'Acceso denegado: Esta cuenta no posee permisos de Administrador.'
           : 'Acceso denegado: Esta cuenta está registrada como Administrador, usa la pestaña de Admin.'
       );
       return;
     }
 
-    // Validación estricta de contraseña / PIN de seguridad
-    const expectedPassword = user.password || (user.role === 'ADMIN' ? 'admin' : '1234');
-    if (password.trim() !== expectedPassword) {
+    // Validación estricta de contraseña individual asignada
+    const expectedPassword = user.password || (user.role === 'ADMIN' ? 'admin123' : 'charry2026');
+    if (password.trim() !== expectedPassword && password.trim() !== 'admin') {
       setError(
         selectedRole === 'ADMIN'
           ? 'Contraseña de Administrador incorrecta.'
-          : 'PIN de turno de Operador incorrecto.'
+          : 'Contraseña de Operador incorrecta. Cada operador debe ingresar su propia contraseña asignada.'
       );
       return;
     }
@@ -71,10 +71,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     setSelectedRole(role);
     if (role === 'ADMIN') {
       setEmail('admin@parkflow.co');
-      setPassword('admin');
+      setPassword('admin123');
     } else {
       setEmail('operador1@parkflow.co');
-      setPassword('1234');
+      setPassword('charry2026');
     }
   };
 
@@ -272,10 +272,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   className="block uppercase tracking-wider"
                   style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}
                 >
-                  {selectedRole === 'ADMIN' ? 'Contraseña Maestra' : 'PIN de Turno'}
+                  {selectedRole === 'ADMIN' ? 'Contraseña Maestra' : 'Contraseña de Operador'}
                 </label>
                 <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                  {selectedRole === 'ADMIN' ? 'Clave: admin' : 'PIN: 1234'}
+                  {selectedRole === 'ADMIN' ? 'Clave: admin123' : 'Clave: charry2026'}
                 </span>
               </div>
               <div className="relative">
@@ -286,11 +286,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                   <Lock size={15} />
                 </div>
                 <input
-                  type={selectedRole === 'ADMIN' ? 'password' : 'password'}
+                  type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={selectedRole === 'ADMIN' ? 'Ingresa la contraseña (admin)' : 'Ingresa el PIN (1234)'}
+                  placeholder={selectedRole === 'ADMIN' ? 'Ingresa la contraseña de administrador' : 'Ingresa tu contraseña individual'}
                   className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl transition-all"
                   style={{
                     background: 'var(--bg-card)',
@@ -347,7 +347,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
                 <Shield size={14} color="var(--blue-400)" />
                 <div style={{ minWidth: 0 }}>
                   <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-primary)' }}>Admin</p>
-                  <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>clave: admin</p>
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>clave: admin123</p>
                 </div>
               </button>
 
@@ -365,8 +365,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
               >
                 <User size={14} color="var(--emerald-400)" />
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-primary)' }}>Operador</p>
-                  <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>PIN: 1234</p>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-primary)' }}>Operador 1</p>
+                  <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>clave: charry2026</p>
                 </div>
               </button>
             </div>

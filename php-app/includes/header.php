@@ -186,19 +186,15 @@ $flash = getFlash();
                 <?= $currentUser['role'] === 'ADMIN' ? 'Administrador' : 'Operador de Turno' ?>
               </span>
             </div>
-            <!-- Lista de Usuarios -->
-            <div style="padding:.375rem;">
-              <p style="padding:.375rem .625rem; font-size:.6rem; font-weight:700; color:#2d3d54; text-transform:uppercase; letter-spacing:.08em;">Cambiar Operador</p>
-              <?php foreach ($allUsers as $u): ?>
-                <form action="actions/switch_user.php" method="POST">
-                  <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
-                  <button type="submit" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:.5rem .625rem; border-radius:10px; border:none; background:<?= $u['id'] === $currentUser['id'] ? 'rgba(59,130,246,.12)' : 'transparent' ?>; cursor:pointer; transition:background .12s; color:<?= $u['id'] === $currentUser['id'] ? '#60a5fa' : '#94a3b8' ?>;"
-                         onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background='<?= $u['id'] === $currentUser['id'] ? 'rgba(59,130,246,.12)' : 'transparent' ?>'">
-                    <span style="font-size:.75rem; font-weight:<?= $u['id'] === $currentUser['id'] ? '700' : '500' ?>; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:140px;"><?= htmlspecialchars($u['name']) ?></span>
-                    <span style="font-size:.6rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#2d3d54; flex-shrink:0;"><?= $u['role'] ?></span>
-                  </button>
-                </form>
-              <?php endforeach; ?>
+            <!-- Acciones de Cuenta -->
+            <div style="padding:.5rem;">
+              <form action="actions/logout.php" method="POST">
+                <button type="submit" style="width:100%; display:flex; align-items:center; gap:.5rem; padding:.625rem .75rem; border-radius:10px; border:none; background:rgba(244,63,94,.1); cursor:pointer; transition:all .15s; color:#fb7185; font-size:.8rem; font-weight:700;"
+                        onmouseover="this.style.background='rgba(244,63,94,.2)'" onmouseout="this.style.background='rgba(244,63,94,.1)'">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  <span>Cerrar Sesión</span>
+                </button>
+              </form>
             </div>
           </div>
         </div>

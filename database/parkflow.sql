@@ -112,9 +112,9 @@ CREATE TABLE `movements` (
 
 -- Usuarios iniciales con credenciales individuales y hashes seguros Bcrypt
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `shift`, `active`) VALUES
-('usr-admin-1', 'Carlos Mendoza', 'admin@parkflow.co', '$2y$10$T7hX.wMYCg7CXIW2vpuEP.lPGY/BAP1S./HNE1dBoucw6az5ijhpO', 'ADMIN', 'Mañana (06:00 - 14:00)', 1),
-('usr-op-1', 'Andrés Charry', 'operador1@parkflow.co', '$2y$10$B.lLF3NLxxPl2bD7ORfEU.2I0teG3t9Cj8PWnSy7c1hqvhhiugSXK', 'OPERADOR', 'Mañana (06:00 - 14:00)', 1),
-('usr-op-2', 'Valentina Perdomo', 'operador2@parkflow.co', '$2y$10$DVWczC0OQU.TiobHpD0NQ.TrclwOnYK4mMJ7DK4jmre8OPuA5rPoi', 'OPERADOR', 'Tarde (14:00 - 22:00)', 1)
+('usr-admin-1', 'Carlos Mendoza', 'admin@parkflow.co', '$2y$10$rEiwECylbr5IerCqrcYqC.TyW1XKq/W6AKJ4v56RYxn8jxb4VtyuO', 'ADMIN', 'Mañana (06:00 - 14:00)', 1),
+('usr-op-1', 'Andrés Charry', 'operador1@parkflow.co', '$2y$10$/9Y0NjZjHYwCMhRDTW/rwOAyNPY9yIyFZ5YaxV0lraNjG.EkiK8y2', 'OPERADOR', 'Mañana (06:00 - 14:00)', 1),
+('usr-op-2', 'Valentina Perdomo', 'operador2@parkflow.co', '$2y$10$DwmMqG1gDpDYlxZEavPXpep8N6CIp1QFkLsfPjbB802AraH4pXoFe', 'OPERADOR', 'Tarde (14:00 - 22:00)', 1)
 ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `password`=VALUES(`password`);
 
 -- Tarifas iniciales

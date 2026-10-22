@@ -92,7 +92,7 @@ switch ($action) {
         $password = trim($body['password'] ?? '');
 
         if (empty($email) || empty($password)) {
-            jsonError('Debes ingresar tu correo y contraseña/PIN personal.', 400);
+            jsonError('Debes ingresar tu correo y contraseña individual.', 400);
         }
 
         $pdo = getDbConnection(true);
@@ -108,7 +108,7 @@ switch ($action) {
             jsonError('Usuario inactivo en el sistema. Contacta al Administrador.', 403);
         }
 
-        // Validación estricta con password_verify (Bcrypt) o compatibilidad
+        // Validación estricta con password_verify (Bcrypt) individual
         $storedHash = $user['password'] ?? '';
         $isPasswordValid = false;
 
@@ -123,7 +123,7 @@ switch ($action) {
         }
 
         if (!$isPasswordValid) {
-            jsonError('Contraseña o PIN incorrecto para este usuario.', 401);
+            jsonError('Contraseña incorrecta para este usuario.', 401);
         }
 
         // Generar token JWT individual

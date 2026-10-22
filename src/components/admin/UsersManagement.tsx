@@ -9,6 +9,7 @@ export const UsersManagement: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('OPERADOR');
   const [shift, setShift] = useState<'Mañana (06:00 - 14:00)' | 'Tarde (14:00 - 22:00)' | 'Noche (22:00 - 06:00)'>('Mañana (06:00 - 14:00)');
   const [formError, setFormError] = useState<string | null>(null);
@@ -22,9 +23,15 @@ export const UsersManagement: React.FC = () => {
       return;
     }
 
+    if (!password.trim() || password.trim().length < 4) {
+      setFormError('La contraseña individual debe tener al menos 4 caracteres.');
+      return;
+    }
+
     const res = await createUser({
       name: name.trim(),
       email: email.trim().toLowerCase(),
+      password: password.trim(),
       role,
       shift,
       active: true
@@ -33,6 +40,7 @@ export const UsersManagement: React.FC = () => {
     if (res.success) {
       setName('');
       setEmail('');
+      setPassword('');
       setIsModalOpen(false);
     } else {
       setFormError(res.error || 'Error al crear usuario.');
@@ -201,6 +209,20 @@ export const UsersManagement: React.FC = () => {
                   placeholder="ejemplo@parkflow.co"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Contraseña Individual
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Mínimo 4 caracteres (ej: op2026*)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:bg-white"
                 />
               </div>
