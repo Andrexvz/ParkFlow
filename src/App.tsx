@@ -35,12 +35,24 @@ function MainApp() {
   const [exitPreselectedSpaceId, setExitPreselectedSpaceId] = useState<string | undefined>(undefined);
   const [exitPreselectedMovementId, setExitPreselectedMovementId] = useState<string | undefined>(undefined);
 
-  // Sincronizar vista si cambia el rol de usuario
+  // Listas de vistas permitidas por rol
+  const OPERATOR_ALLOWED_VIEWS = ['operator-grid', 'operator-active'];
+
+  // Validación estricta y segura de navegación
+  const handleNavigate = (targetView: string) => {
+    if (currentUser?.role === 'OPERADOR' && !OPERATOR_ALLOWED_VIEWS.includes(targetView)) {
+      // Bloqueo de seguridad: operador no puede saltar a vistas admin
+      return;
+    }
+    setCurrentView(targetView);
+  };
+
+  // Sincronizar vista si cambia el rol de usuario o si intenta acceder a una ruta no autorizada
   useEffect(() => {
-    if (currentUser?.role === 'OPERADOR' && currentView.startsWith('admin-')) {
+    if (currentUser?.role === 'OPERADOR' && !OPERATOR_ALLOWED_VIEWS.includes(currentView)) {
       setCurrentView('operator-grid');
     }
-  }, [currentUser, currentView]);
+  }, [currentUser?.role, currentView]);
 
   // Si no está autenticado, mostrar Login
   if (!currentUser) {
@@ -76,53 +88,100 @@ function MainApp() {
     setIsEntryModalOpen(true);
   };
 
+  // Verificación de acceso para la vista activa
+  const isOperatorTryingAdminView = currentUser.role === 'OPERADOR' && !OPERATOR_ALLOWED_VIEWS.includes(currentView);
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-900">
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}>
       {/* Banner de tiempo y control de pruebas de tarifas */}
       <TimeSimulatorBanner />
 
-      {/* Barra de navegación superior (Top Bar Contract) */}
+      {/* Barra de navegación superior con control de permisos */}
       <Header
         currentView={currentView}
-        onNavigate={setCurrentView}
+        onNavigate={handleNavigate}
         onOpenEntryModal={handleOpenQuickEntry}
       />
 
-      {/* Contenido Principal */}
+      {/* Contenido Principal con Guardia de Seguridad */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
-        {currentView === 'operator-grid' && (
-          <ParkingGrid
-            onSelectSpaceForEntry={handleOpenEntryFromSpace}
-            onSelectSpaceForExit={handleOpenExitFromSpace}
-          />
-        )}
+        {isOperatorTryingAdminView ? (
+          <div
+            className="flex flex-col items-center justify-center text-center p-10 rounded-2xl animate-fade-in"
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid rgba(244, 63, 94, 0.3)',
+              boxShadow: 'var(--shadow-lg)',
+              marginTop: 32,
+            }}
+          >
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: '50%',
+                background: 'rgba(244, 63, 94, 0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 16,
+                border: '1px solid rgba(244, 63, 94, 0.25)',
+              }}
+            >
+              <span style={{ fontSize: '1.8rem' }}>🔒</span>
+            </div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--rose-400)', marginBottom: 8 }}>
+              Acceso Restringido por Rol de Seguridad
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', maxWidth: 520, fontSize: '0.88rem', lineHeight: 1.6, marginBottom: 20 }}>
+              Tu cuenta actual tiene el rol de <strong style={{ color: 'var(--emerald-400)' }}>OPERADOR</strong>.
+              Este módulo está reservado exclusivamente para personal con rol de <strong style={{ color: 'var(--blue-400)' }}>ADMINISTRADOR</strong>.
+            </p>
+            <button
+              onClick={() => setCurrentView('operator-grid')}
+              className="btn btn-primary"
+              style={{ padding: '10px 22px', fontSize: '0.88rem', cursor: 'pointer' }}
+            >
+              Volver al Mapa de Celdas
+            </button>
+          </div>
+        ) : (
+          <>
+            {currentView === 'operator-grid' && (
+              <ParkingGrid
+                onSelectSpaceForEntry={handleOpenEntryFromSpace}
+                onSelectSpaceForExit={handleOpenExitFromSpace}
+              />
+            )}
 
-        {currentView === 'operator-active' && (
-          <ActiveVehiclesList
-            onProcessExit={handleOpenExitFromMovement}
-          />
-        )}
+            {currentView === 'operator-active' && (
+              <ActiveVehiclesList
+                onProcessExit={handleOpenExitFromMovement}
+              />
+            )}
 
-        {currentView === 'admin-dashboard' && (
-          <AdminDashboard
-            onNavigate={setCurrentView}
-          />
-        )}
+            {currentView === 'admin-dashboard' && (
+              <AdminDashboard
+                onNavigate={handleNavigate}
+              />
+            )}
 
-        {currentView === 'admin-spaces' && (
-          <SpacesManagement />
-        )}
+            {currentView === 'admin-spaces' && (
+              <SpacesManagement />
+            )}
 
-        {currentView === 'admin-rates' && (
-          <RatesManagement />
-        )}
+            {currentView === 'admin-rates' && (
+              <RatesManagement />
+            )}
 
-        {currentView === 'admin-users' && (
-          <UsersManagement />
-        )}
+            {currentView === 'admin-users' && (
+              <UsersManagement />
+            )}
 
-        {currentView === 'admin-history' && (
-          <HistoryAudit />
+            {currentView === 'admin-history' && (
+              <HistoryAudit />
+            )}
+          </>
         )}
       </main>
 
@@ -151,12 +210,12 @@ function MainApp() {
       <TicketModal />
 
       {/* Footer corporativo sutil */}
-      <footer className="border-t border-slate-200 bg-white py-4 text-xs text-slate-500">
+      <footer style={{ borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-surface)' }} className="py-4 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>
+          <p style={{ color: 'var(--text-muted)' }}>
             © {new Date().getFullYear()} ParkFlow S.A.S. · NIT: 900.845.123-1 · Calle 10 # 5-42 Centro, Neiva (Huila)
           </p>
-          <div className="flex items-center gap-3 text-slate-400">
+          <div className="flex items-center gap-3" style={{ color: 'var(--text-muted)' }}>
             <span>Resolución Tarifaria Municipal</span>
             <span>·</span>
             <span>Soporte: (608) 871-4500</span>

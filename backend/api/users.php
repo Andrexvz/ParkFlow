@@ -53,8 +53,14 @@ switch ($method) {
             jsonError('Ya existe un usuario con este correo electrónico.');
         }
 
-        $stmt = $pdo->prepare("INSERT INTO `users` (`id`, `name`, `email`, `role`, `shift`, `active`) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$id, $name, $email, $role, $shift, $active]);
+        $rawPassword = trim($body['password'] ?? '');
+        if (empty($rawPassword)) {
+            $rawPassword = ($role === 'ADMIN') ? 'Admin@ParkFlow2026' : ('Op#' . rand(1000, 9999));
+        }
+        $passwordHash = password_hash($rawPassword, PASSWORD_BCRYPT);
+
+        $stmt = $pdo->prepare("INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `shift`, `active`) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$id, $name, $email, $passwordHash, $role, $shift, $active]);
 
         $created = $pdo->prepare("SELECT * FROM `users` WHERE `id` = ?");
         $created->execute([$id]);
@@ -99,8 +105,14 @@ switch ($method) {
                 jsonError('El correo electrónico ya está en uso por otro usuario.');
             }
 
-            $stmt = $pdo->prepare("UPDATE `users` SET `name` = ?, `email` = ?, `role` = ?, `shift` = ?, `active` = ? WHERE `id` = ?");
-            $stmt->execute([$name, $email, $role, $shift, $active, $id]);
+            if (!empty($body['password'])) {
+                $passwordHash = password_hash(trim($body['password']), PASSWORD_BCRYPT);
+                $stmt = $pdo->prepare("UPDATE `users` SET `name` = ?, `email` = ?, `role` = ?, `shift` = ?, `active` = ?, `password` = ? WHERE `id` = ?");
+                $stmt->execute([$name, $email, $role, $shift, $active, $passwordHash, $id]);
+            } else {
+                $stmt = $pdo->prepare("UPDATE `users` SET `name` = ?, `email` = ?, `role` = ?, `shift` = ?, `active` = ? WHERE `id` = ?");
+                $stmt->execute([$name, $email, $role, $shift, $active, $id]);
+            }
         }
 
         $updated = $pdo->prepare("SELECT * FROM `users` WHERE `id` = ?");

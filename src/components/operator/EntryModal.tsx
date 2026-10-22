@@ -83,7 +83,7 @@ export const EntryModal: React.FC<EntryModalProps> = ({ isOpen, onClose, presele
   // Tarifa aplicable
   const currentRate = rates.find(r => r.vehicleType === vehicleType) || rates[0];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmissionError(null);
 
@@ -98,7 +98,7 @@ export const EntryModal: React.FC<EntryModalProps> = ({ isOpen, onClose, presele
       return;
     }
 
-    const res = registerEntry({
+    const res = await registerEntry({
       plate: validation.formattedPlate,
       vehicleType,
       spaceId: useAutoSpace ? undefined : selectedSpaceId,

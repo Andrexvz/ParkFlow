@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParking } from '../../context/ParkingContext';
-import { ParkingSpace, VehicleType, SpaceStatus } from '../../types';
-import { Car, Bike, Truck, Clock, AlertTriangle, Check, Search, Filter, Wrench, ShieldAlert } from 'lucide-react';
+import { ParkingSpace, VehicleType } from '../../types';
+import { Car, Bike, Truck, Clock, Search, Filter, Wrench, X } from 'lucide-react';
 import { formatCOP, formatDuration } from '../../utils/pricingCalculator';
 
 interface ParkingGridProps {
@@ -20,236 +20,234 @@ export const ParkingGrid: React.FC<ParkingGridProps> = ({
   const [searchPlate, setSearchPlate] = useState<string>('');
   const [selectedSpaceDetails, setSelectedSpaceDetails] = useState<ParkingSpace | null>(null);
 
-  // Zonas disponibles
   const zones = ['all', 'Zona A', 'Zona B', 'Zona C', 'Zona D'];
 
-  // Filtrado de celdas
   const filteredSpaces = spaces.filter(space => {
     if (selectedZone !== 'all' && space.zone !== selectedZone) return false;
     if (selectedType !== 'all' && space.allowedType !== selectedType) return false;
     if (searchPlate.trim()) {
       const q = searchPlate.trim().toUpperCase();
-      const matchPlate = space.currentVehiclePlate?.toUpperCase().includes(q);
-      const matchCode = space.code.toUpperCase().includes(q);
-      if (!matchPlate && !matchCode) return false;
+      if (!space.currentVehiclePlate?.toUpperCase().includes(q) && !space.code.toUpperCase().includes(q)) return false;
     }
     return true;
   });
 
-  // Helper de ícono por tipo
-  const getVehicleIcon = (type: VehicleType, className = 'w-4 h-4') => {
+  const getVehicleIcon = (type: VehicleType, size = 14) => {
     switch (type) {
-      case 'motocicleta':
-        return <Bike className={className} />;
-      case 'camioneta':
-        return <Truck className={className} />;
-      case 'bicicleta':
-        return <Bike className={className} />;
-      case 'automovil':
-      default:
-        return <Car className={className} />;
+      case 'motocicleta': return <Bike size={size} />;
+      case 'camioneta':   return <Truck size={size} />;
+      case 'bicicleta':   return <Bike size={size} />;
+      default:            return <Car size={size} />;
     }
   };
 
-  // Helper de tiempo transcurrido para vehículo estacionado
   const getStayInfo = (movementId?: string) => {
     if (!movementId) return null;
     const movement = movements.find(m => m.id === movementId);
     if (!movement) return null;
-
     const entryDate = new Date(movement.entryTime);
-    const diffMs = Math.max(0, currentEffectiveTime.getTime() - entryDate.getTime());
-    const totalMinutes = Math.floor(diffMs / (1000 * 60));
-
-    // Tarifa estimada aproximada
+    const totalMinutes = Math.floor(Math.max(0, currentEffectiveTime.getTime() - entryDate.getTime()) / 60000);
     const rate = rates.find(r => r.vehicleType === movement.vehicleType) || rates[0];
     const hours = Math.floor(totalMinutes / 60);
-    const estCost = totalMinutes <= rate.gracePeriodMinutes
-      ? 0
-      : (hours + 1) * rate.ratePerHour;
-
-    return {
-      movement,
-      entryDate,
-      totalMinutes,
-      durationText: formatDuration(totalMinutes),
-      estCost
-    };
+    const estCost = totalMinutes <= rate.gracePeriodMinutes ? 0 : (hours + 1) * rate.ratePerHour;
+    return { movement, entryDate, totalMinutes, durationText: formatDuration(totalMinutes), estCost };
   };
 
   const handleCellClick = (space: ParkingSpace) => {
     if (space.status === 'libre') {
       onSelectSpaceForEntry(space.id);
-    } else if (space.status === 'ocupado') {
-      setSelectedSpaceDetails(space);
     } else {
-      // Mantenimiento o reservado: abre modal para ver o cambiar estado si es admin
       setSelectedSpaceDetails(space);
     }
   };
 
+  // Pill tab button style
+  const tabStyle = (active: boolean) => ({
+    padding: '5px 12px',
+    fontSize: '0.75rem',
+    fontWeight: active ? 600 : 400,
+    borderRadius: 7,
+    background: active ? 'var(--bg-elevated)' : 'transparent',
+    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+    border: active ? '1px solid var(--border-default)' : '1px solid transparent',
+    cursor: 'pointer',
+    transition: 'all 120ms ease',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 5,
+    whiteSpace: 'nowrap' as const,
+  });
+
+  const freeCount  = spaces.filter(s => s.status === 'libre').length;
+  const occCount   = spaces.filter(s => s.status === 'ocupado').length;
+  const maintCount = spaces.filter(s => s.status === 'mantenimiento' || s.status === 'reservado').length;
+
   return (
-    <div className="space-y-6">
-      {/* Top Filter and Controls Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div className="space-y-5 animate-fade-in">
+
+      {/* Filter Bar */}
+      <div className="glass-card" style={{ padding: '16px 20px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
           <div>
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
               Mapa de Celdas en Tiempo Real
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Haz clic en cualquier celda libre para registrar ingreso, o en una ocupada para ver detalles y liquidar cobro.
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 3 }}>
+              Clic en celda libre → registrar entrada · Clic en ocupada → ver detalles y cobrar
             </p>
           </div>
 
-          {/* Quick search input */}
-          <div className="relative min-w-[240px]">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          {/* Search */}
+          <div style={{ position: 'relative', minWidth: 230 }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
             <input
               type="text"
-              placeholder="Buscar por placa o celda (Ej: KEO, A-03)..."
+              placeholder="Placa o celda (ej: KEO, A-03)..."
               value={searchPlate}
-              onChange={(e) => setSearchPlate(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all uppercase"
+              onChange={e => setSearchPlate(e.target.value)}
+              className="dark-input"
+              style={{ paddingLeft: 32, paddingRight: 12, paddingTop: 7, paddingBottom: 7, fontSize: '0.78rem', textTransform: 'uppercase' }}
             />
           </div>
         </div>
 
-        {/* Filters and Status Counts */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
-              <Filter className="w-3.5 h-3.5" /> Zona:
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
+          {/* Zone + Type filters */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Filter size={12} /> Zona:
             </span>
-            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
+            <div style={{ display: 'flex', gap: 3, padding: 3, background: 'var(--bg-input)', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
               {zones.map(z => (
-                <button
-                  key={z}
-                  onClick={() => setSelectedZone(z)}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
-                    selectedZone === z
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {z === 'all' ? 'Todas las Zonas' : z}
+                <button key={z} onClick={() => setSelectedZone(z)} style={tabStyle(selectedZone === z)}>
+                  {z === 'all' ? 'Todas' : z}
                 </button>
               ))}
             </div>
 
-            <div className="hidden sm:block h-4 w-px bg-slate-200 mx-1" />
+            <div style={{ width: 1, height: 18, background: 'var(--border-subtle)', margin: '0 4px' }} />
 
-            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
-              <button
-                onClick={() => setSelectedType('all')}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                  selectedType === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Todos
-              </button>
-              <button
-                onClick={() => setSelectedType('automovil')}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
-                  selectedType === 'automovil' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Car className="w-3.5 h-3.5" /> Autos
-              </button>
-              <button
-                onClick={() => setSelectedType('motocicleta')}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
-                  selectedType === 'motocicleta' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Bike className="w-3.5 h-3.5" /> Motos
-              </button>
-              <button
-                onClick={() => setSelectedType('camioneta')}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
-                  selectedType === 'camioneta' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Truck className="w-3.5 h-3.5" /> SUV/Van
-              </button>
+            <div style={{ display: 'flex', gap: 3, padding: 3, background: 'var(--bg-input)', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
+              {[
+                { key: 'all', label: 'Todos' },
+                { key: 'automovil',   label: 'Autos',   icon: <Car size={12} /> },
+                { key: 'motocicleta', label: 'Motos',   icon: <Bike size={12} /> },
+                { key: 'camioneta',   label: 'SUV/Van', icon: <Truck size={12} /> },
+              ].map(t => (
+                <button key={t.key} onClick={() => setSelectedType(t.key)} style={tabStyle(selectedType === t.key)}>
+                  {t.icon}{t.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Legend and live numbers */}
-          <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-emerald-500 border border-emerald-600" />
-              <span className="text-slate-600">Libre ({spaces.filter(s => s.status === 'libre').length})</span>
+          {/* Legend */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: '0.72rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--emerald-400)' }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--emerald-500)', display: 'inline-block' }} />
+              Libre ({freeCount})
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-rose-500 border border-rose-600" />
-              <span className="text-slate-600">Ocupado ({spaces.filter(s => s.status === 'ocupado').length})</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--blue-400)' }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--blue-500)', display: 'inline-block' }} />
+              Ocupado ({occCount})
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-amber-400 border border-amber-500" />
-              <span className="text-slate-600">Mantenimiento ({spaces.filter(s => s.status === 'mantenimiento' || s.status === 'reservado').length})</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--amber-400)' }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--amber-500)', display: 'inline-block' }} />
+              No disp. ({maintCount})
             </div>
           </div>
         </div>
       </div>
 
-      {/* Grid of Parking Spaces */}
+      {/* Space Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
         {filteredSpaces.map(space => {
           const stayInfo = getStayInfo(space.currentMovementId);
+          const isFree  = space.status === 'libre';
           const isOccupied = space.status === 'ocupado';
-          const isFree = space.status === 'libre';
-          const isMaintenance = space.status === 'mantenimiento' || space.status === 'reservado';
+          const isMaint = !isFree && !isOccupied;
+
+          let cardBg     = isFree ? 'rgba(16,185,129,0.05)'  : isOccupied ? 'rgba(59,130,246,0.06)' : 'rgba(245,158,11,0.05)';
+          let cardBorder = isFree ? 'rgba(16,185,129,0.22)'  : isOccupied ? 'rgba(59,130,246,0.22)' : 'rgba(245,158,11,0.22)';
+          let iconColor  = isFree ? 'var(--emerald-400)'     : isOccupied ? 'var(--blue-400)'       : 'var(--amber-400)';
+          let labelColor = isFree ? 'var(--emerald-400)'     : isOccupied ? 'var(--text-secondary)' : 'var(--amber-400)';
 
           return (
             <button
               key={space.id}
               onClick={() => handleCellClick(space)}
-              className={`relative text-left p-3 rounded-xl border transition-all group flex flex-col justify-between min-h-[110px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                isFree
-                  ? 'bg-emerald-50/60 hover:bg-emerald-100/70 border-emerald-200 hover:border-emerald-400 text-emerald-950 shadow-xs'
-                  : isOccupied
-                  ? 'bg-rose-50/70 hover:bg-rose-100/80 border-rose-200 hover:border-rose-400 text-rose-950 shadow-xs'
-                  : 'bg-amber-50/60 hover:bg-amber-100/70 border-amber-200 hover:border-amber-400 text-amber-950'
-              }`}
+              style={{
+                position: 'relative',
+                textAlign: 'left',
+                padding: '11px 12px',
+                borderRadius: 12,
+                border: `1px solid ${cardBorder}`,
+                background: cardBg,
+                cursor: isMaint ? 'default' : 'pointer',
+                minHeight: 108,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                transition: 'all 180ms ease',
+              }}
+              onMouseEnter={e => {
+                if (isMaint) return;
+                const b = e.currentTarget as HTMLButtonElement;
+                b.style.transform = 'scale(1.04)';
+                b.style.boxShadow = isFree
+                  ? '0 0 16px rgba(16,185,129,0.25)'
+                  : '0 0 16px rgba(59,130,246,0.25)';
+                b.style.borderColor = isFree ? 'var(--emerald-400)' : 'var(--blue-400)';
+              }}
+              onMouseLeave={e => {
+                const b = e.currentTarget as HTMLButtonElement;
+                b.style.transform = 'scale(1)';
+                b.style.boxShadow = 'none';
+                b.style.borderColor = cardBorder;
+              }}
             >
-              {/* Card Header: Space Code & Vehicle Type */}
-              <div className="flex items-center justify-between w-full">
-                <span className="font-mono font-bold text-sm tracking-tight">
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                   {space.code}
                 </span>
-                <span className={`p-1 rounded ${
-                  isFree ? 'text-emerald-700 bg-emerald-100' : isOccupied ? 'text-rose-700 bg-rose-100' : 'text-amber-700 bg-amber-100'
-                }`}>
-                  {getVehicleIcon(space.allowedType, 'w-3.5 h-3.5')}
+                <span style={{ color: iconColor, display: 'flex', padding: '3px', borderRadius: 5, background: `${iconColor}15` }}>
+                  {getVehicleIcon(space.allowedType)}
                 </span>
               </div>
 
-              {/* Card Body: Dynamic Status Content */}
-              <div className="my-1 w-full">
+              {/* Body */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '6px 0' }}>
                 {isFree && (
-                  <div className="space-y-0.5">
-                    <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">
-                      DISPONIBLE
-                    </p>
-                    <p className="text-[10px] text-emerald-600/80 capitalize">
-                      {space.allowedType}
-                    </p>
+                  <div>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--emerald-400)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>DISPONIBLE</p>
+                    <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'capitalize', marginTop: 2 }}>{space.allowedType}</p>
                   </div>
                 )}
 
                 {isOccupied && (
-                  <div className="space-y-1">
-                    <div className="bg-slate-900 text-white font-mono font-bold px-1.5 py-0.5 rounded text-xs text-center tracking-wider shadow-xs border border-slate-700">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{
+                      background: 'var(--bg-base)',
+                      border: '1px solid var(--border-default)',
+                      borderRadius: 6,
+                      padding: '2px 6px',
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      color: 'var(--text-primary)',
+                      textAlign: 'center',
+                      letterSpacing: '0.05em',
+                    }}>
                       {space.currentVehiclePlate}
                     </div>
                     {stayInfo && (
-                      <div className="flex items-center justify-between text-[10px] text-rose-800 font-mono tabular-nums">
-                        <span className="flex items-center gap-0.5">
-                          <Clock className="w-2.5 h-2.5" />
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <Clock size={10} />
                           {stayInfo.durationText}
                         </span>
-                        <span className="font-semibold text-rose-900">
+                        <span style={{ color: 'var(--cyan-400)', fontWeight: 700 }}>
                           {formatCOP(stayInfo.estCost)}
                         </span>
                       </div>
@@ -257,14 +255,13 @@ export const ParkingGrid: React.FC<ParkingGridProps> = ({
                   </div>
                 )}
 
-                {isMaintenance && (
-                  <div className="space-y-0.5">
-                    <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide flex items-center gap-1">
-                      <Wrench className="w-3 h-3" />
-                      {space.status === 'reservado' ? 'RESERVADO' : 'MANTENIMIENTO'}
+                {isMaint && (
+                  <div>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--amber-400)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <Wrench size={10} /> {space.status === 'reservado' ? 'RESERVADO' : 'MANTENIM.'}
                     </p>
                     {space.notes && (
-                      <p className="text-[10px] text-amber-800 truncate" title={space.notes}>
+                      <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={space.notes}>
                         {space.notes}
                       </p>
                     )}
@@ -272,12 +269,15 @@ export const ParkingGrid: React.FC<ParkingGridProps> = ({
                 )}
               </div>
 
-              {/* Card Footer: Action Prompt */}
-              <div className="w-full pt-1 border-t border-black/5 text-[10px] flex items-center justify-between text-slate-500">
-                <span className="text-[9px] uppercase font-mono">{space.zone}</span>
-                <span className="opacity-0 group-hover:opacity-100 font-medium transition-opacity text-slate-800">
-                  {isFree ? 'Asignar →' : isOccupied ? 'Cobrar →' : 'Ver'}
-                </span>
+              {/* Footer */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <span style={{ fontSize: '0.6rem', fontFamily: 'monospace', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{space.zone}</span>
+                {!isMaint && (
+                  <span style={{ fontSize: '0.62rem', fontWeight: 600, color: labelColor, opacity: 0 }}
+                    className="group-hover:opacity-100">
+                    {isFree ? 'Asignar →' : 'Cobrar →'}
+                  </span>
+                )}
               </div>
             </button>
           );
@@ -285,141 +285,135 @@ export const ParkingGrid: React.FC<ParkingGridProps> = ({
       </div>
 
       {filteredSpaces.length === 0 && (
-        <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
-          <p className="text-sm font-semibold text-slate-700">No se encontraron celdas con los filtros actuales</p>
-          <p className="text-xs text-slate-400 mt-1">Prueba seleccionando otra zona o limpiando la búsqueda.</p>
+        <div className="glass-card" style={{ padding: '32px 24px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.9rem' }}>
+            No se encontraron celdas con los filtros actuales
+          </p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: 6 }}>
+            Prueba seleccionando otra zona o limpiando la búsqueda.
+          </p>
         </div>
       )}
 
-      {/* Selected Space Inspection Modal */}
+      {/* Space Detail Modal */}
       {selectedSpaceDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-100">
-          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-4">
-            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+        <div className="modal-overlay" onClick={() => setSelectedSpaceDetails(null)}>
+          <div className="modal-box" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '20px 24px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
               <div>
-                <span className="text-xs font-mono font-semibold text-blue-600 uppercase">
+                <span style={{ fontSize: '0.68rem', fontFamily: 'monospace', fontWeight: 700, color: 'var(--blue-400)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   {selectedSpaceDetails.zone}
                 </span>
-                <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                  <span>Celda {selectedSpaceDetails.code}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded font-mono font-semibold uppercase ${
-                    selectedSpaceDetails.status === 'libre'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : selectedSpaceDetails.status === 'ocupado'
-                      ? 'bg-rose-100 text-rose-800'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  Celda {selectedSpaceDetails.code}
+                  <span className={`badge ${selectedSpaceDetails.status === 'libre' ? 'badge-emerald' : selectedSpaceDetails.status === 'ocupado' ? 'badge-blue' : 'badge-amber'}`}
+                    style={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     {selectedSpaceDetails.status}
                   </span>
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedSpaceDetails(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                style={{ padding: 8, background: 'var(--bg-hover)', border: 'none', borderRadius: 8, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}
+                onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)')}
+                onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)')}
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
 
-            {selectedSpaceDetails.status === 'ocupado' && (() => {
-              const info = getStayInfo(selectedSpaceDetails.currentMovementId);
-              return info ? (
-                <div className="space-y-3">
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-slate-500">Placa Registrada:</span>
-                      <span className="font-mono font-extrabold text-base text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
-                        {selectedSpaceDetails.currentVehiclePlate}
-                      </span>
+            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Occupied */}
+              {selectedSpaceDetails.status === 'ocupado' && (() => {
+                const info = getStayInfo(selectedSpaceDetails.currentMovementId);
+                return info ? (
+                  <>
+                    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '16px' }}>
+                      {[
+                        { label: 'Placa Registrada', value: (
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)', background: 'var(--bg-base)', padding: '2px 10px', borderRadius: 6, border: '1px solid var(--border-default)' }}>
+                            {selectedSpaceDetails.currentVehiclePlate}
+                          </span>
+                        )},
+                        { label: 'Tipo de Vehículo', value: <span style={{ fontWeight: 500, textTransform: 'capitalize', color: 'var(--text-primary)' }}>{info.movement.vehicleType}</span> },
+                        { label: 'Hora de Entrada', value: <span style={{ fontFamily: 'monospace', color: 'var(--text-primary)' }}>{info.entryDate.toLocaleTimeString('es-CO')}</span> },
+                        { label: 'Tiempo Transcurrido', value: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--cyan-400)' }}>{info.durationText}</span> },
+                      ].map(row => (
+                        <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{row.label}</span>
+                          {row.value}
+                        </div>
+                      ))}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, marginTop: 4 }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Cobro Estimado Actual</span>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, fontSize: '1.1rem', color: 'var(--emerald-400)' }}>
+                          {formatCOP(info.estCost)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between text-xs text-slate-600">
-                      <span>Tipo de Vehículo:</span>
-                      <span className="font-medium capitalize">{info.movement.vehicleType}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-slate-600">
-                      <span>Hora de Entrada:</span>
-                      <span className="font-mono">{info.entryDate.toLocaleTimeString('es-CO')}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-slate-600">
-                      <span>Tiempo Transcurrido:</span>
-                      <span className="font-mono font-bold text-slate-900">{info.durationText}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-slate-600 pt-2 border-t border-slate-200">
-                      <span>Cobro Estimado Actual:</span>
-                      <span className="font-mono font-extrabold text-base text-blue-600">
-                        {formatCOP(info.estCost)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {info.movement.helmetsCount ? (
-                    <p className="text-xs text-slate-600">
-                      🏍️ Cascos registrados: <span className="font-semibold">{info.movement.helmetsCount}</span>
-                    </p>
-                  ) : null}
-
-                  {info.movement.entryNotes && (
-                    <p className="text-xs text-slate-500 italic bg-amber-50 p-2 rounded-lg border border-amber-200">
-                      Observación: {info.movement.entryNotes}
-                    </p>
-                  )}
-
-                  <div className="pt-2 flex gap-2">
+                    {info.movement.helmetsCount ? (
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        🏍️ Cascos registrados: <strong>{info.movement.helmetsCount}</strong>
+                      </p>
+                    ) : null}
+                    {info.movement.entryNotes && (
+                      <p style={{ fontSize: '0.78rem', color: 'var(--amber-400)', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8, padding: '8px 12px', fontStyle: 'italic' }}>
+                        Obs: {info.movement.entryNotes}
+                      </p>
+                    )}
                     <button
-                      onClick={() => {
-                        const mId = selectedSpaceDetails.currentMovementId;
-                        setSelectedSpaceDetails(null);
-                        if (mId) onSelectSpaceForExit(selectedSpaceDetails.id);
-                      }}
-                      className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-colors text-center shadow-sm"
+                      onClick={() => { const id = selectedSpaceDetails.id; setSelectedSpaceDetails(null); onSelectSpaceForExit(id); }}
+                      className="btn-primary"
+                      style={{ width: '100%', justifyContent: 'center', padding: '11px' }}
                     >
                       Cobrar y Registrar Salida
                     </button>
-                  </div>
-                </div>
-              ) : null;
-            })()}
+                  </>
+                ) : null;
+              })()}
 
-            {selectedSpaceDetails.status === 'libre' && (
-              <div className="space-y-4">
-                <p className="text-xs text-slate-600">
-                  Esta celda está disponible para vehículos tipo <span className="font-semibold capitalize">{selectedSpaceDetails.allowedType}</span>.
-                </p>
-                <button
-                  onClick={() => {
-                    const id = selectedSpaceDetails.id;
-                    setSelectedSpaceDetails(null);
-                    onSelectSpaceForEntry(id);
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-colors text-center"
-                >
-                  Registrar Entrada en Celda {selectedSpaceDetails.code}
-                </button>
-              </div>
-            )}
+              {/* Free */}
+              {selectedSpaceDetails.status === 'libre' && (
+                <>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                    Esta celda está disponible para vehículos tipo <strong style={{ color: 'var(--text-primary)', textTransform: 'capitalize' }}>{selectedSpaceDetails.allowedType}</strong>.
+                  </p>
+                  <button
+                    onClick={() => { const id = selectedSpaceDetails.id; setSelectedSpaceDetails(null); onSelectSpaceForEntry(id); }}
+                    className="btn-primary"
+                    style={{ width: '100%', justifyContent: 'center', padding: '11px', background: 'linear-gradient(135deg, #10b981, #059669)' }}
+                  >
+                    Registrar Entrada en Celda {selectedSpaceDetails.code}
+                  </button>
+                </>
+              )}
 
-            {(selectedSpaceDetails.status === 'mantenimiento' || selectedSpaceDetails.status === 'reservado') && (
-              <div className="space-y-3">
-                <p className="text-xs text-slate-600">
-                  Estado actual: <span className="font-semibold uppercase">{selectedSpaceDetails.status}</span>.
-                  {selectedSpaceDetails.notes && ` Detalle: ${selectedSpaceDetails.notes}`}
-                </p>
-
-                {currentUser?.role === 'ADMIN' && (
-                  <div className="pt-2 flex gap-2">
+              {/* Maintenance / Reserved */}
+              {(selectedSpaceDetails.status === 'mantenimiento' || selectedSpaceDetails.status === 'reservado') && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                    Estado: <strong style={{ color: 'var(--amber-400)', textTransform: 'uppercase' }}>{selectedSpaceDetails.status}</strong>.
+                    {selectedSpaceDetails.notes && ` ${selectedSpaceDetails.notes}`}
+                  </p>
+                  {currentUser?.role === 'ADMIN' && (
                     <button
-                      onClick={() => {
-                        updateSpaceStatus(selectedSpaceDetails.id, 'libre', '');
-                        setSelectedSpaceDetails(null);
+                      onClick={() => { updateSpaceStatus(selectedSpaceDetails.id, 'libre', ''); setSelectedSpaceDetails(null); }}
+                      style={{
+                        width: '100%', padding: '10px', fontSize: '0.85rem', fontWeight: 600,
+                        color: 'var(--emerald-400)', background: 'rgba(16,185,129,0.1)',
+                        border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, cursor: 'pointer',
+                        transition: 'all 150ms',
                       }}
-                      className="flex-1 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors"
+                      onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(16,185,129,0.2)')}
+                      onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(16,185,129,0.1)')}
                     >
                       Habilitar como Libre
                     </button>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

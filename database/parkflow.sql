@@ -110,12 +110,12 @@ CREATE TABLE `movements` (
 -- DATOS INICIALES (SEEDS)
 -- ========================================================
 
--- Usuarios iniciales
-INSERT INTO `users` (`id`, `name`, `email`, `role`, `shift`, `active`) VALUES
-('usr-admin-1', 'Carlos Mendoza', 'admin@parkflow.co', 'ADMIN', 'Mañana (06:00 - 14:00)', 1),
-('usr-op-1', 'Andrés Charry', 'operador1@parkflow.co', 'OPERADOR', 'Mañana (06:00 - 14:00)', 1),
-('usr-op-2', 'Valentina Perdomo', 'operador2@parkflow.co', 'OPERADOR', 'Tarde (14:00 - 22:00)', 1)
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`);
+-- Usuarios iniciales con credenciales individuales y hashes seguros Bcrypt
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `shift`, `active`) VALUES
+('usr-admin-1', 'Carlos Mendoza', 'admin@parkflow.co', '$2y$10$T7hX.wMYCg7CXIW2vpuEP.lPGY/BAP1S./HNE1dBoucw6az5ijhpO', 'ADMIN', 'Mañana (06:00 - 14:00)', 1),
+('usr-op-1', 'Andrés Charry', 'operador1@parkflow.co', '$2y$10$B.lLF3NLxxPl2bD7ORfEU.2I0teG3t9Cj8PWnSy7c1hqvhhiugSXK', 'OPERADOR', 'Mañana (06:00 - 14:00)', 1),
+('usr-op-2', 'Valentina Perdomo', 'operador2@parkflow.co', '$2y$10$DVWczC0OQU.TiobHpD0NQ.TrclwOnYK4mMJ7DK4jmre8OPuA5rPoi', 'OPERADOR', 'Tarde (14:00 - 22:00)', 1)
+ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `password`=VALUES(`password`);
 
 -- Tarifas iniciales
 INSERT INTO `rates` (`id`, `vehicle_type`, `label`, `rate_per_minute`, `rate_per_fraction15m`, `rate_per_hour`, `rate_per_day`, `rate_per_month`, `grace_period_minutes`, `lost_ticket_fee`) VALUES

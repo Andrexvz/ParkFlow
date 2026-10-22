@@ -24,7 +24,7 @@ export const SpacesManagement: React.FC = () => {
     return true;
   });
 
-  const handleCreateSpace = (e: React.FormEvent) => {
+  const handleCreateSpace = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
@@ -33,7 +33,7 @@ export const SpacesManagement: React.FC = () => {
       return;
     }
 
-    const res = createSpace({
+    const res = await createSpace({
       code: newCode.trim().toUpperCase(),
       zone: newZone,
       allowedType: newType,
@@ -48,9 +48,9 @@ export const SpacesManagement: React.FC = () => {
     }
   };
 
-  const handleDelete = (id: string, code: string) => {
+  const handleDelete = async (id: string, code: string) => {
     if (confirm(`¿Estás seguro de que deseas eliminar la celda ${code}?`)) {
-      const res = deleteSpace(id);
+      const res = await deleteSpace(id);
       if (!res.success) {
         alert(res.error);
       }

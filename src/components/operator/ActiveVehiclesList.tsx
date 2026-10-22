@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParking } from '../../context/ParkingContext';
 import { Movement, VehicleType } from '../../types';
-import { Search, Clock, CreditCard, Printer, Trash2, Car, Bike, Truck, ArrowUpRight } from 'lucide-react';
+import { Search, Clock, Printer, Car, Bike, Truck, ArrowUpRight } from 'lucide-react';
 import { formatCOP, formatDuration } from '../../utils/pricingCalculator';
 
 interface ActiveVehiclesListProps {
@@ -9,7 +9,7 @@ interface ActiveVehiclesListProps {
 }
 
 export const ActiveVehiclesList: React.FC<ActiveVehiclesListProps> = ({ onProcessExit }) => {
-  const { movements, rates, currentEffectiveTime, openTicketModal, cancelActiveMovement } = useParking();
+  const { movements, rates, currentEffectiveTime, openTicketModal } = useParking();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
@@ -19,182 +19,183 @@ export const ActiveVehiclesList: React.FC<ActiveVehiclesListProps> = ({ onProces
     if (typeFilter !== 'all' && m.vehicleType !== typeFilter) return false;
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      const matchPlate = m.plate.toLowerCase().includes(q);
-      const matchSpace = m.spaceCode.toLowerCase().includes(q);
-      const matchTicket = m.ticketNumber.toLowerCase().includes(q);
-      if (!matchPlate && !matchSpace && !matchTicket) return false;
+      if (!m.plate.toLowerCase().includes(q) && !m.spaceCode.toLowerCase().includes(q) && !m.ticketNumber.toLowerCase().includes(q)) return false;
     }
     return true;
   });
 
   const getVehicleIcon = (type: VehicleType) => {
-    switch (type) {
-      case 'motocicleta':
-        return <Bike className="w-3.5 h-3.5 text-blue-600" />;
-      case 'camioneta':
-        return <Truck className="w-3.5 h-3.5 text-amber-600" />;
-      case 'bicicleta':
-        return <Bike className="w-3.5 h-3.5 text-emerald-600" />;
-      case 'automovil':
-      default:
-        return <Car className="w-3.5 h-3.5 text-indigo-600" />;
-    }
+    const color = type === 'motocicleta' ? 'var(--blue-400)' : type === 'camioneta' ? 'var(--amber-400)' : type === 'bicicleta' ? 'var(--emerald-400)' : 'var(--violet-400)';
+    const Icon = type === 'camioneta' ? Truck : type === 'automovil' ? Car : Bike;
+    return <Icon size={14} color={color} />;
   };
 
   const getEstCost = (m: Movement) => {
-    const entryDate = new Date(m.entryTime);
-    const diffMs = Math.max(0, currentEffectiveTime.getTime() - entryDate.getTime());
-    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    const totalMinutes = Math.floor(Math.max(0, currentEffectiveTime.getTime() - new Date(m.entryTime).getTime()) / 60000);
     const rate = rates.find(r => r.vehicleType === m.vehicleType) || rates[0];
-
-    if (totalMinutes <= rate.gracePeriodMinutes) {
-      return { totalMinutes, cost: 0, isGrace: true };
-    }
-    const hours = Math.floor(totalMinutes / 60);
-    const cost = (hours + 1) * rate.ratePerHour;
+    if (totalMinutes <= rate.gracePeriodMinutes) return { totalMinutes, cost: 0, isGrace: true };
+    const cost = (Math.floor(totalMinutes / 60) + 1) * rate.ratePerHour;
     return { totalMinutes, cost, isGrace: false };
   };
 
+  const tabStyle = (active: boolean) => ({
+    padding: '5px 12px',
+    fontSize: '0.75rem',
+    fontWeight: active ? 600 : 400,
+    borderRadius: 7,
+    background: active ? 'var(--bg-elevated)' : 'transparent',
+    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+    border: active ? '1px solid var(--border-default)' : '1px solid transparent',
+    cursor: 'pointer',
+    transition: 'all 120ms ease',
+    whiteSpace: 'nowrap' as const,
+  });
+
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
-      {/* Header & Filters */}
-      <div className="p-4 sm:p-5 border-b border-slate-200 space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="glass-card animate-fade-in" style={{ overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div>
-            <h3 className="text-base font-bold text-slate-900 tracking-tight">
-              Vehículos Estacionados Actualmente ({activeMovements.length})
+            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+              Vehículos Estacionados Actualmente
+              <span style={{ marginLeft: 8, fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-muted)' }}>
+                ({activeMovements.length} activos)
+              </span>
             </h3>
-            <p className="text-xs text-slate-500">
-              Listado en vivo de vehículos activos en parqueadero con cronómetro de tiempo
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 3 }}>
+              Listado en vivo con cronómetro de tiempo y cobro estimado
             </p>
           </div>
-
-          <div className="relative min-w-[220px]">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div style={{ position: 'relative', minWidth: 220 }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
             <input
               type="text"
-              placeholder="Filtrar por placa, celda..."
+              placeholder="Placa, celda o ticket..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white uppercase"
+              onChange={e => setSearch(e.target.value)}
+              className="dark-input"
+              style={{ paddingLeft: 32, paddingTop: 7, paddingBottom: 7, fontSize: '0.78rem', textTransform: 'uppercase' }}
             />
           </div>
         </div>
 
-        {/* Filter buttons */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg w-fit">
-          <button
-            onClick={() => setTypeFilter('all')}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-              typeFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
+        {/* Type filter tabs */}
+        <div style={{ display: 'flex', gap: 3, padding: 3, background: 'var(--bg-input)', borderRadius: 10, border: '1px solid var(--border-subtle)', width: 'fit-content' }}>
+          <button style={tabStyle(typeFilter === 'all')} onClick={() => setTypeFilter('all')}>
             Todos ({activeMovements.length})
           </button>
-          <button
-            onClick={() => setTypeFilter('automovil')}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-              typeFilter === 'automovil' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Autos ({activeMovements.filter(m => m.vehicleType === 'automovil').length})
-          </button>
-          <button
-            onClick={() => setTypeFilter('motocicleta')}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-              typeFilter === 'motocicleta' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Motos ({activeMovements.filter(m => m.vehicleType === 'motocicleta').length})
-          </button>
-          <button
-            onClick={() => setTypeFilter('camioneta')}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-              typeFilter === 'camioneta' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            SUV/Van ({activeMovements.filter(m => m.vehicleType === 'camioneta').length})
-          </button>
+          {['automovil', 'motocicleta', 'camioneta'].map(t => (
+            <button key={t} style={tabStyle(typeFilter === t)} onClick={() => setTypeFilter(t)}>
+              {t === 'automovil' ? 'Autos' : t === 'motocicleta' ? 'Motos' : 'SUV/Van'} ({activeMovements.filter(m => m.vehicleType === t).length})
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs">
+      <div style={{ overflowX: 'auto' }}>
+        <table className="dark-table">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
-              <th className="py-2.5 px-4">Ticket</th>
-              <th className="py-2.5 px-4">Placa</th>
-              <th className="py-2.5 px-4">Celda</th>
-              <th className="py-2.5 px-4">Tipo</th>
-              <th className="py-2.5 px-4">Hora Entrada</th>
-              <th className="py-2.5 px-4">Tiempo Transcurrido</th>
-              <th className="py-2.5 px-4 text-right">Costo Est.</th>
-              <th className="py-2.5 px-4 text-right">Acciones</th>
+            <tr>
+              <th>Ticket</th>
+              <th>Placa</th>
+              <th>Celda</th>
+              <th>Tipo</th>
+              <th>Hora Entrada</th>
+              <th>Tiempo</th>
+              <th style={{ textAlign: 'right' }}>Costo Est.</th>
+              <th style={{ textAlign: 'right' }}>Acciones</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody>
             {filtered.map(m => {
               const info = getEstCost(m);
               const entryDate = new Date(m.entryTime);
-
               return (
-                <tr key={m.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3 px-4 font-mono font-medium text-slate-700">
-                    {m.ticketNumber}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="font-mono font-extrabold text-xs px-2 py-0.5 rounded bg-slate-900 text-white tracking-wider">
-                      {m.plate}
+                <tr key={m.id}>
+                  <td>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      {m.ticketNumber}
                     </span>
-                    {m.helmetsCount ? (
-                      <span className="ml-2 text-[10px] text-blue-600 font-medium">
-                        ({m.helmetsCount} cascos)
-                      </span>
-                    ) : null}
                   </td>
-                  <td className="py-3 px-4">
-                    <span className="font-mono font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        padding: '2px 8px',
+                        borderRadius: 5,
+                        background: 'var(--bg-base)',
+                        border: '1px solid var(--border-default)',
+                        color: 'var(--text-primary)',
+                        letterSpacing: '0.05em',
+                      }}>
+                        {m.plate}
+                      </span>
+                      {m.helmetsCount ? (
+                        <span style={{ fontSize: '0.68rem', color: 'var(--blue-400)', fontWeight: 500 }}>
+                          ({m.helmetsCount} cascos)
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
+                  <td>
+                    <span className="badge badge-blue" style={{ fontFamily: 'monospace' }}>
                       {m.spaceCode}
                     </span>
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-1.5 capitalize text-slate-700">
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, textTransform: 'capitalize', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
                       {getVehicleIcon(m.vehicleType)}
-                      <span>{m.vehicleType}</span>
+                      {m.vehicleType}
                     </div>
                   </td>
-                  <td className="py-3 px-4 font-mono text-slate-600">
-                    {entryDate.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                  <td>
+                    <span style={{ fontFamily: 'monospace', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                      {entryDate.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-1 font-mono font-bold text-slate-800">
-                      <Clock className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{formatDuration(info.totalMinutes)}</span>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'monospace', fontWeight: 700, color: 'var(--cyan-400)' }}>
+                      <Clock size={13} color="var(--text-muted)" />
+                      {formatDuration(info.totalMinutes)}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-right font-mono font-bold tabular-nums">
+                  <td style={{ textAlign: 'right' }}>
                     {info.isGrace ? (
-                      <span className="text-emerald-600">Cortesía (0$)</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--emerald-400)', fontSize: '0.78rem' }}>
+                        Cortesía
+                      </span>
                     ) : (
-                      <span className="text-slate-900">{formatCOP(info.cost)}</span>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.82rem' }}>
+                        {formatCOP(info.cost)}
+                      </span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
+                  <td style={{ textAlign: 'right' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
                       <button
                         onClick={() => openTicketModal(m, 'entry')}
-                        className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
                         title="Reimprimir Ticket de Entrada"
+                        style={{
+                          padding: 7, background: 'transparent',
+                          border: 'none', borderRadius: 8,
+                          color: 'var(--text-muted)', cursor: 'pointer',
+                          display: 'flex', transition: 'all 120ms',
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-hover)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
                       >
-                        <Printer className="w-3.5 h-3.5" />
+                        <Printer size={14} />
                       </button>
                       <button
                         onClick={() => onProcessExit(m.id)}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors shadow-2xs"
+                        className="btn-primary"
+                        style={{ padding: '5px 12px', fontSize: '0.75rem', gap: 4 }}
                       >
-                        <span>Cobrar</span>
-                        <ArrowUpRight className="w-3 h-3" />
+                        Cobrar <ArrowUpRight size={13} />
                       </button>
                     </div>
                   </td>
@@ -205,8 +206,10 @@ export const ActiveVehiclesList: React.FC<ActiveVehiclesListProps> = ({ onProces
         </table>
 
         {filtered.length === 0 && (
-          <div className="py-10 text-center text-slate-400">
-            <p className="text-xs">No se encontraron vehículos activos con los filtros indicados.</p>
+          <div style={{ padding: '40px 24px', textAlign: 'center' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+              No se encontraron vehículos activos con los filtros indicados.
+            </p>
           </div>
         )}
       </div>

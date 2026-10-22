@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParking } from '../context/ParkingContext';
-import { LogOut, Plus, ShieldCheck, UserCheck, RefreshCw, Volume2, VolumeX, Menu, X, Database } from 'lucide-react';
+import { LogOut, Plus, ShieldCheck, UserCheck, Volume2, VolumeX, Menu, X, Database, Car } from 'lucide-react';
 import { soundEffects } from '../utils/soundEffects';
 import { XamppStatusModal } from './XamppStatusModal';
 
@@ -33,66 +33,96 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onOpenE
       ]
     : [
         { id: 'operator-grid', label: 'Mapa de Celdas' },
-        { id: 'operator-active', label: 'Vehículos Activos' },
-        { id: 'admin-history', label: 'Historial del Turno' }
+        { id: 'operator-active', label: 'Vehículos Activos' }
       ];
 
   return (
     <>
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+      <header style={{
+        background: 'var(--bg-surface)',
+        borderBottom: '1px solid var(--border-subtle)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 30,
+      }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          {/* Zone 1: Brand title & quick indicator */}
+
+          {/* Zone 1: Brand */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => onNavigate(currentUser?.role === 'ADMIN' ? 'admin-dashboard' : 'operator-grid')}
-              className="text-xl font-extrabold tracking-tight text-slate-900 hover:text-blue-600 transition-colors focus:outline-none"
+              className="flex items-center gap-2 focus:outline-none"
+              style={{ textDecoration: 'none' }}
             >
-              ParkFlow
+              <div style={{
+                width: 32, height: 32,
+                background: 'var(--gradient-brand)',
+                borderRadius: 8,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: 'var(--shadow-blue)',
+              }}>
+                <Car size={18} color="#fff" />
+              </div>
+              <span style={{
+                fontSize: '1.1rem',
+                fontWeight: 800,
+                background: 'var(--gradient-brand)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                letterSpacing: '-0.02em',
+              }}>
+                ParkFlow
+              </span>
             </button>
 
-            {/* Quick live indicator */}
-            <div className="hidden lg:flex items-center gap-2 text-xs text-slate-500 pl-3 border-l border-slate-200">
-              <span className="font-medium text-slate-800">{stats.occupiedSpaces}/{stats.totalSpaces} celdas</span>
-              <span className="text-slate-300">·</span>
-              <span className={`font-semibold ${stats.occupancyRate > 85 ? 'text-rose-600' : 'text-emerald-600'}`}>
+            {/* Live stats pill */}
+            <div className="hidden lg:flex items-center gap-2 pl-3" style={{ borderLeft: '1px solid var(--border-subtle)' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {stats.occupiedSpaces}/{stats.totalSpaces}
+              </span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>celdas</span>
+              <span style={{ color: 'var(--border-default)' }}>·</span>
+              <span style={{
+                fontSize: '0.78rem', fontWeight: 700,
+                color: stats.occupancyRate > 85 ? 'var(--rose-400)' : 'var(--emerald-400)'
+              }}>
                 {stats.occupancyRate}% ocupado
               </span>
             </div>
-
-            {/* XAMPP MySQL Status Badge */}
-            <button
-              onClick={() => setShowXamppModal(true)}
-              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border transition-all ${
-                connectionStatus === 'connected'
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 shadow-xs'
-                  : connectionStatus === 'checking'
-                  ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
-                  : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
-              }`}
-              title="Clic para ver detalles de la conexión con XAMPP y MySQL"
-            >
-              <Database className={`w-3.5 h-3.5 ${connectionStatus === 'connected' ? 'text-emerald-500' : 'text-slate-400'}`} />
-              <span>
-                {connectionStatus === 'connected' && 'MySQL Conectado'}
-                {connectionStatus === 'checking' && 'Verificando XAMPP...'}
-                {connectionStatus === 'offline' && 'Modo Local (XAMPP Off)'}
-              </span>
-            </button>
           </div>
 
-          {/* Zone 2: Navigation links */}
-          <nav className="hidden md:flex items-center gap-1 lg:gap-2">
+          {/* Zone 2: Navigation */}
+          <nav className="hidden md:flex items-center gap-1">
             {navItems.map(item => {
               const isActive = currentView === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
-                    isActive
-                      ? 'bg-slate-900 text-white'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
+                  style={{
+                    padding: '6px 13px',
+                    fontSize: '0.82rem',
+                    fontWeight: isActive ? 600 : 500,
+                    borderRadius: 8,
+                    background: isActive ? 'rgba(59,130,246,0.15)' : 'transparent',
+                    color: isActive ? 'var(--blue-400)' : 'var(--text-secondary)',
+                    border: isActive ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent',
+                    cursor: 'pointer',
+                    transition: 'all 150ms ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={e => {
+                    if (!isActive) {
+                      (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
+                      (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-hover)';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) {
+                      (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                      (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                    }
+                  }}
                 >
                   {item.label}
                 </button>
@@ -100,96 +130,168 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onOpenE
             })}
           </nav>
 
-          {/* Zone 3: Primary Actions */}
+          {/* Zone 3: Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Audio toggle button */}
+            {/* Sound toggle */}
             <button
               onClick={handleToggleSound}
-              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-              title={isMuted ? 'Activar efectos de sonido' : 'Silenciar sonido'}
+              className="p-2 rounded-lg transition-all"
+              style={{ color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+              title={isMuted ? 'Activar sonido' : 'Silenciar'}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              {isMuted ? <VolumeX className="w-4 h-4 text-slate-400" /> : <Volume2 className="w-4 h-4 text-slate-600" />}
+              {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
             </button>
 
-            {/* Primary CTA button */}
+            {/* Primary CTA */}
             <button
               onClick={onOpenEntryModal}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm transition-colors whitespace-nowrap"
+              className="btn-primary"
+              style={{ padding: '8px 16px', fontSize: '0.82rem' }}
             >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>Registrar Entrada</span>
+              <Plus size={16} strokeWidth={2.5} />
+              <span className="hidden sm:inline">Registrar Entrada</span>
+              <span className="sm:hidden">Entrada</span>
             </button>
 
-            {/* User profile and switcher dropdown */}
+            {/* User Menu */}
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 p-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+                className="flex items-center gap-2 rounded-xl transition-all"
+                style={{
+                  padding: '5px 10px 5px 6px',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-subtle)',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-default)')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
               >
-                <div className="w-7 h-7 rounded-md bg-slate-800 text-white font-bold flex items-center justify-center text-xs">
+                <div style={{
+                  width: 28, height: 28,
+                  borderRadius: 8,
+                  background: 'var(--gradient-brand)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.75rem', fontWeight: 800, color: '#fff',
+                }}>
                   {currentUser?.name.charAt(0)}
                 </div>
-                <div className="hidden xl:block pr-1 leading-tight">
-                  <p className="text-xs font-semibold text-slate-900 truncate max-w-[110px]">{currentUser?.name}</p>
-                  <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">{currentUser?.role}</p>
+                <div className="hidden xl:block leading-tight text-left">
+                  <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {currentUser?.name}
+                  </p>
+                  <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    {currentUser?.role}
+                  </p>
                 </div>
               </button>
 
-              {/* Dropdown Menu */}
+              {/* Dropdown */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in slide-in-from-top-2">
-                  <div className="px-4 py-2 border-b border-slate-100">
-                    <p className="text-xs text-slate-400 font-medium">Conectado como</p>
-                    <p className="text-sm font-bold text-slate-900 truncate">{currentUser?.name}</p>
-                    <p className="text-xs text-slate-500">{currentUser?.email}</p>
-                    <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded w-fit">
-                      {currentUser?.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3" /> : <UserCheck className="w-3 h-3" />}
-                      <span>{currentUser?.role === 'ADMIN' ? 'Administrador' : 'Operador'}</span>
-                    </div>
-                  </div>
-
-                  <div className="px-2 py-1.5">
-                    <p className="px-2 py-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                      Cambiar de Usuario (Simulación)
+                <div
+                  className="absolute right-0 mt-2 animate-slide-top"
+                  style={{
+                    width: 260,
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: 16,
+                    boxShadow: 'var(--shadow-xl)',
+                    zIndex: 50,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* User info */}
+                  <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Conectado como
                     </p>
-                    {users.map(u => (
-                      <button
-                        key={u.id}
-                        onClick={() => {
-                          switchUser(u.id);
-                          setShowUserMenu(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
-                          u.id === currentUser?.id ? 'bg-slate-100 font-bold text-slate-900' : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="truncate">{u.name}</span>
-                        <span className="text-[10px] text-slate-400 font-normal capitalize">
-                          {u.role.toLowerCase()}
-                        </span>
-                      </button>
-                    ))}
+                    <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {currentUser?.name}
+                    </p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 1 }}>
+                      {currentUser?.email}
+                    </p>
+                    <span className="badge badge-blue" style={{ marginTop: 6, display: 'inline-flex' }}>
+                      {currentUser?.role === 'ADMIN'
+                        ? <><ShieldCheck size={11} /> Administrador</>
+                        : <><UserCheck size={11} /> Operador</>}
+                    </span>
                   </div>
 
-                  <div className="border-t border-slate-100 pt-1 mt-1 px-2">
+                  {/* User switcher con restricciones estrictas de rol */}
+                  <div style={{ padding: '8px' }}>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 8px 6px' }}>
+                      {currentUser?.role === 'ADMIN' ? 'Cambiar de Usuario (Admin)' : 'Operadores del Turno'}
+                    </p>
+
+                    {currentUser?.role === 'OPERADOR' && (
+                      <div
+                        style={{
+                          padding: '8px 10px',
+                          fontSize: '0.72rem',
+                          color: 'var(--text-muted)',
+                          background: 'rgba(244, 63, 94, 0.08)',
+                          borderRadius: 8,
+                          border: '1px solid rgba(244, 63, 94, 0.15)',
+                          marginBottom: 8,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        🔒 <strong>Rol protegido:</strong> Para acceder con cuenta de Administrador debes cerrar sesión e ingresar tus credenciales.
+                      </div>
+                    )}
+
+                    {users
+                      .filter(u => currentUser?.role === 'ADMIN' || u.role === 'OPERADOR')
+                      .map(u => (
+                        <button
+                          key={u.id}
+                          onClick={() => { switchUser(u.id); setShowUserMenu(false); }}
+                          className="w-full flex items-center justify-between rounded-lg transition-all"
+                          style={{
+                            padding: '8px 10px',
+                            fontSize: '0.82rem',
+                            background: u.id === currentUser?.id ? 'rgba(59,130,246,0.12)' : 'transparent',
+                            color: u.id === currentUser?.id ? 'var(--blue-400)' : 'var(--text-secondary)',
+                            border: 'none',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                          }}
+                          onMouseEnter={e => { if (u.id !== currentUser?.id) (e.currentTarget.style.background = 'var(--bg-hover)'); }}
+                          onMouseLeave={e => { if (u.id !== currentUser?.id) (e.currentTarget.style.background = 'transparent'); }}
+                        >
+                          <span style={{ fontWeight: u.id === currentUser?.id ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {u.name}
+                          </span>
+                          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'capitalize', flexShrink: 0, marginLeft: 8 }}>
+                            {u.role.toLowerCase()}
+                          </span>
+                        </button>
+                      ))}
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ padding: '8px', borderTop: '1px solid var(--border-subtle)' }}>
                     <button
-                      onClick={() => {
-                        setShowUserMenu(false);
-                        setShowXamppModal(true);
-                      }}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors"
+                      onClick={() => { setShowUserMenu(false); setShowXamppModal(true); }}
+                      className="w-full flex items-center gap-2 rounded-lg transition-all"
+                      style={{ padding: '8px 10px', fontSize: '0.82rem', color: 'var(--text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <Database className="w-3.5 h-3.5 text-blue-600" />
+                      <Database size={14} color="var(--blue-400)" />
                       <span>Configuración XAMPP MySQL</span>
                     </button>
                     <button
-                      onClick={() => {
-                        setShowUserMenu(false);
-                        logout();
-                      }}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+                      onClick={() => { setShowUserMenu(false); logout(); }}
+                      className="w-full flex items-center gap-2 rounded-lg transition-all"
+                      style={{ padding: '8px 10px', fontSize: '0.82rem', color: 'var(--rose-400)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(244,63,94,0.1)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <LogOut className="w-3.5 h-3.5" />
+                      <LogOut size={14} />
                       <span>Cerrar Sesión</span>
                     </button>
                   </div>
@@ -200,24 +302,36 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onOpenE
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+              className="md:hidden p-2 rounded-lg"
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
 
-        {/* Mobile nav drawer */}
+        {/* Mobile nav */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200 bg-white px-4 py-3 space-y-1">
+          <div
+            className="md:hidden animate-fade-in"
+            style={{ borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '8px 12px 12px' }}
+          >
             <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setShowXamppModal(true);
+              onClick={() => { setMobileMenuOpen(false); setShowXamppModal(true); }}
+              className="w-full flex items-center gap-2 rounded-lg mb-2"
+              style={{
+                padding: '9px 12px',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                background: connectionStatus === 'connected' ? 'rgba(16,185,129,0.1)' : 'rgba(74,83,112,0.1)',
+                color: connectionStatus === 'connected' ? 'var(--emerald-400)' : 'var(--text-muted)',
+                border: `1px solid ${connectionStatus === 'connected' ? 'rgba(16,185,129,0.25)' : 'var(--border-subtle)'}`,
+                cursor: 'pointer',
               }}
-              className="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-800 flex items-center gap-2"
             >
-              <Database className="w-4 h-4 text-emerald-600" />
+              <Database size={15} />
               <span>Estado XAMPP MySQL ({connectionStatus === 'connected' ? 'En Línea' : 'Offline'})</span>
             </button>
             {navItems.map(item => {
@@ -225,13 +339,18 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onOpenE
               return (
                 <button
                   key={item.id}
-                  onClick={() => {
-                    onNavigate(item.id);
-                    setMobileMenuOpen(false);
+                  onClick={() => { onNavigate(item.id); setMobileMenuOpen(false); }}
+                  className="w-full text-left rounded-lg mb-1"
+                  style={{
+                    padding: '9px 12px',
+                    fontSize: '0.85rem',
+                    fontWeight: isActive ? 600 : 400,
+                    background: isActive ? 'rgba(59,130,246,0.15)' : 'transparent',
+                    color: isActive ? 'var(--blue-400)' : 'var(--text-secondary)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'block',
                   }}
-                  className={`w-full text-left px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
-                  }`}
                 >
                   {item.label}
                 </button>
@@ -241,7 +360,6 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onOpenE
         )}
       </header>
 
-      {/* Modal de Estado de XAMPP */}
       <XamppStatusModal
         isOpen={showXamppModal}
         onClose={() => setShowXamppModal(false)}

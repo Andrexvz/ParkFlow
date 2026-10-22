@@ -104,7 +104,7 @@ export const ExitModal: React.FC<ExitModalProps> = ({
     setErrorMessage(null);
   };
 
-  const handleConfirmExit = (e: React.FormEvent) => {
+  const handleConfirmExit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -123,7 +123,7 @@ export const ExitModal: React.FC<ExitModalProps> = ({
       }
     }
 
-    const res = processExit({
+    const res = await processExit({
       movementId: selectedMovement.id,
       paymentMethod,
       amountReceived: paymentMethod === 'efectivo' ? Number(amountReceived) : feeBreakdown.total,

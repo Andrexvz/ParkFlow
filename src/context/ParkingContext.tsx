@@ -642,6 +642,10 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [connectionStatus]);
 
   const createSpace = useCallback(async (spaceData: Omit<ParkingSpace, 'id'>) => {
+    if (currentUser?.role !== 'ADMIN') {
+      return { success: false, error: 'Acceso Denegado: Solo el Administrador tiene permiso para crear celdas.' };
+    }
+
     if (spaces.some(s => s.code.toUpperCase() === spaceData.code.toUpperCase())) {
       return { success: false, error: `Ya existe una celda con el código ${spaceData.code}.` };
     }
@@ -679,6 +683,10 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [connectionStatus]);
 
   const deleteSpace = useCallback(async (spaceId: string) => {
+    if (currentUser?.role !== 'ADMIN') {
+      return { success: false, error: 'Acceso Denegado: Solo el Administrador tiene permiso para eliminar celdas.' };
+    }
+
     const space = spaces.find(s => s.id === spaceId);
     if (space?.status === 'ocupado') {
       return { success: false, error: 'No se puede eliminar una celda ocupada. Debe liberar el vehículo primero.' };
@@ -695,10 +703,15 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSpaces(prev => prev.filter(s => s.id !== spaceId));
     soundEffects.playSuccess();
     return { success: true };
-  }, [spaces, connectionStatus]);
+  }, [spaces, connectionStatus, currentUser?.role]);
 
   // Rates management
   const updateRate = useCallback(async (rate: VehicleRate) => {
+    if (currentUser?.role !== 'ADMIN') {
+      console.warn('Acceso Denegado: Solo el Administrador puede modificar tarifas.');
+      return;
+    }
+
     if (connectionStatus === 'connected') {
       try {
         await api.updateRate(rate);
@@ -708,10 +721,14 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     setRates(prev => prev.map(r => r.id === rate.id ? rate : r));
     soundEffects.playSuccess();
-  }, [connectionStatus]);
+  }, [connectionStatus, currentUser?.role]);
 
   // Users management
   const createUser = useCallback(async (userData: Omit<User, 'id'>) => {
+    if (currentUser?.role !== 'ADMIN') {
+      return { success: false, error: 'Acceso Denegado: Solo el Administrador puede registrar nuevos usuarios.' };
+    }
+
     if (users.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
       return { success: false, error: 'Ya existe un usuario con este correo electrónico.' };
     }

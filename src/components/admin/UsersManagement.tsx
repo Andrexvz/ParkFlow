@@ -13,7 +13,7 @@ export const UsersManagement: React.FC = () => {
   const [shift, setShift] = useState<'Mañana (06:00 - 14:00)' | 'Tarde (14:00 - 22:00)' | 'Noche (22:00 - 06:00)'>('Mañana (06:00 - 14:00)');
   const [formError, setFormError] = useState<string | null>(null);
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
@@ -22,7 +22,7 @@ export const UsersManagement: React.FC = () => {
       return;
     }
 
-    const res = createUser({
+    const res = await createUser({
       name: name.trim(),
       email: email.trim().toLowerCase(),
       role,
