@@ -212,7 +212,17 @@ export const ParkingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         api.getMovements()
       ]);
 
-      if (dbUsers && dbUsers.length > 0) setUsers(dbUsers);
+      if (dbUsers && dbUsers.length > 0) {
+        setUsers(prev => {
+          return dbUsers.map(dbU => {
+            const localU = prev.find(p => p.id === dbU.id) || INITIAL_USERS.find(i => i.id === dbU.id);
+            return {
+              ...dbU,
+              password: localU?.password || dbU.password
+            };
+          });
+        });
+      }
       if (dbSpaces && dbSpaces.length > 0) setSpaces(dbSpaces);
       if (dbRates && dbRates.length > 0) setRates(dbRates);
       if (dbMovements) setMovements(dbMovements);

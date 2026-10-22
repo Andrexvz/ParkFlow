@@ -26,11 +26,35 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    const user = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+    const inputEmail = email.trim().toLowerCase();
+    const inputPassword = password.trim();
+
+    // Intentar autenticación segura contra la API de Backend (XAMPP MySQL)
+    try {
+      const res = await api.login(inputEmail, inputPassword);
+      if (res && res.user) {
+        if (res.user.role !== selectedRole) {
+          setError(
+            selectedRole === 'ADMIN'
+              ? 'Acceso denegado: Esta cuenta no posee permisos de Administrador.'
+              : 'Acceso denegado: Esta cuenta está registrada como Administrador, usa la pestaña de Admin.'
+          );
+          return;
+        }
+        login(res.user);
+        onSuccess(res.user.role);
+        return;
+      }
+    } catch {
+      // Si el backend no está disponible o responde offline, proceder con validación local
+    }
+
+    // Validación Local (modo offline / contingencia)
+    const user = users.find(u => u.email.toLowerCase() === inputEmail);
     if (!user) {
       setError('Credenciales inválidas. Correo no registrado en el sistema.');
       return;
@@ -51,9 +75,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccess }) => {
       return;
     }
 
-    // Validación estricta de contraseña individual asignada
-    const expectedPassword = user.password || (user.role === 'ADMIN' ? 'admin123' : 'charry2026');
-    if (password.trim() !== expectedPassword && password.trim() !== 'admin') {
+    // Contraseñas individuales asignadas por usuario
+    const userPassMap: Record<string, string> = {
+      'admin@parkflow.co': 'admin123',
+      'operador1@parkflow.co': 'charry2026',
+      'operador2@parkflow.co': 'valentina2026'
+    };
+
+    const expectedPassword = user.password || userPassMap[user.email.toLowerCase()] || (user.role === 'ADMIN' ? 'admin123' : 'charry2026');
+    const isMasterAdmin = (user.role === 'ADMIN' && inputPassword === 'admin');
+
+    if (inputPassword !== expectedPassword && !isMasterAdmin) {
       setError(
         selectedRole === 'ADMIN'
           ? 'Contraseña de Administrador incorrecta.'
