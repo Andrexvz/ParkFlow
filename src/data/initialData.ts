@@ -6,7 +6,7 @@ export const INITIAL_USERS: User[] = [
     name: 'Carlos Mendoza',
     email: 'admin@parkflow.co',
     role: 'ADMIN',
-    password: 'admin',
+    password: 'admin123',
     shift: 'Mañana (06:00 - 14:00)',
     active: true
   },
